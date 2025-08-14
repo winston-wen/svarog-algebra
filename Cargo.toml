@@ -1,0 +1,8 @@
+[workspace]
+members = [
+    "rug-1.27.0",
+    "svarog-classgroup",
+    "svarog-secp256k1",
+    "secp256k1-sys",
+]
+resolver = "3"
