@@ -1,4 +1,5 @@
 use crate::*;
+use curve_abstract::*;
 
 #[test]
 fn test_scalar() {
@@ -38,11 +39,9 @@ fn test_scalar() {
     assert_eq!(a, b);
     assert_eq!(a, zero);
 
-    let a = Scalar::new_from_be_bytes([0xFFu8; 32]);
+    let a = Scalar::new_from_bytes(&[0xffu8; 32]);
     #[rustfmt::skip]
-    let gt = Scalar::new_from_be_bytes([
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+    let gt = Scalar::new_from_bytes(&[0x01,
         0x45, 0x51, 0x23, 0x19, 0x50, 0xb7, 0x5f, 0xc4,
         0x40, 0x2d, 0xa1, 0x73, 0x2f, 0xc9, 0xbe, 0xbe,
     ]);
@@ -54,8 +53,8 @@ fn test_point() {
     let mut rng = rand::rng();
 
     // new identity point
-    let p = Point::new_gx(&ZERO);
-    assert_eq!(p, Point::new_identity());
+    let p = Point::new_gx(Secp256k1::one());
+    assert_eq!(&p, Secp256k1::generator());
 
     // new random point addition
     let x1 = Scalar::new_rand(&mut rng);
@@ -71,25 +70,25 @@ fn test_point() {
     assert_eq!(p32, p30);
     assert_eq!(p33, p30);
     assert_eq!(p34, p30);
-    assert_ne!(p30, Point::new_identity());
+    assert_ne!(&p30, Secp256k1::identity());
 
     // new random point add 0
     let x = Scalar::new_rand(&mut rng);
     let p0 = Point::new_gx(&x);
-    let p1 = p0.add_gx(&ZERO);
-    let p2 = ID.add_gx(&x);
-    let p3 = p0.add(&ID);
-    let p4 = ID.add(&p0);
+    let p1 = p0.add_gx(Secp256k1::zero());
+    let p2 = Secp256k1::identity().add_gx(&x);
+    let p3 = p0.add(Secp256k1::identity());
+    let p4 = Secp256k1::identity().add(&p0);
     assert_eq!(p1, p0);
     assert_eq!(p2, p0);
     assert_eq!(p3, p4);
     assert_eq!(p3, p0);
     assert_eq!(p4, p0);
-    assert_ne!(p0, Point::new_identity());
+    assert_ne!(&p0, Secp256k1::identity());
 
     // new random points sum to 0
     let x = Scalar::new_rand(&mut rng);
-    let p0 = ID.clone();
+    let p0 = Secp256k1::identity().clone();
     let p1 = Point::new_gx(&x);
     let p2 = Point::new_gx(&x.neg());
     assert_ne!(p1, p0);
@@ -109,14 +108,14 @@ fn test_point() {
     let p0 = Point::new_gx(&x1.mul(&x2));
     assert_eq!(p1, p0);
     assert_eq!(p2, p0);
-    assert_ne!(p0, ID.clone());
+    assert_ne!(p0, Secp256k1::identity().clone());
 
     // new random point multiply 0.
     let x = Scalar::new_rand(&mut rng);
-    let p1 = Point::new_gx(&x).mul_x(&ZERO);
-    let p2 = ID.mul_x(&x);
-    assert_eq!(p1, ID.clone());
-    assert_eq!(p2, ID.clone());
+    let p1 = Point::new_gx(&x).mul_x(Secp256k1::zero());
+    let p2 = Secp256k1::identity().mul_x(&x);
+    assert_eq!(p1, Secp256k1::identity().clone());
+    assert_eq!(p2, Secp256k1::identity().clone());
 
     // The curve group is of prime order, thus
     // no two nonzero elements multiplies to zero.
@@ -130,14 +129,12 @@ fn test_points_fromto_bytes() {
 
     {
         let p = Point::new_gx(&Scalar::new_rand(rng));
-        println!("short {}", p.to_hex33());
-        println!("long {}", p.to_hex65());
 
-        let buf1 = p.to_bytes33();
+        let buf1 = p.to_bytes();
         assert_eq!(buf1.len(), 33);
         let p1 = Point::new_from_bytes(&buf1).unwrap();
 
-        let buf2 = p.to_bytes65();
+        let buf2 = p.to_bytes_long();
         assert_eq!(buf2.len(), 65);
         let p2 = Point::new_from_bytes(&buf2).unwrap();
 
@@ -149,12 +146,12 @@ fn test_points_fromto_bytes() {
         let p1 = Point::new_from_bytes(&Point::ID_BYTES33).unwrap();
         let p2 = Point::new_from_bytes(&Point::ID_BYTES65).unwrap();
 
-        assert_eq!(ID.clone(), p1);
-        assert_eq!(ID.clone(), p2);
+        assert_eq!(Secp256k1::identity(), &p1);
+        assert_eq!(Secp256k1::identity(), &p2);
 
-        let p3 = Point::new_from_bytes(&p1.to_bytes33()).unwrap();
-        let p4 = Point::new_from_bytes(&p2.to_bytes33()).unwrap();
-        assert_eq!(ID.clone(), p3);
-        assert_eq!(ID.clone(), p4);
+        let p3 = Point::new_from_bytes(&p1.to_bytes()).unwrap();
+        let p4 = Point::new_from_bytes(&p2.to_bytes()).unwrap();
+        assert_eq!(Secp256k1::identity(), &p3);
+        assert_eq!(Secp256k1::identity(), &p4);
     }
 }

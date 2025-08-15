@@ -1,58 +1,45 @@
 use std::fmt;
 
-use erreur::*;
+use curve_abstract::{self as abs, TrCurve};
 use secp256k1_sys::{self as ffi, CPtr, types::c_uint};
+use serde::{Deserialize, Serialize};
 
-use crate::{ID, Scalar, ZERO, thlocal_ctx};
+use crate::{Scalar, Secp256k1, thlocal_ctx};
 
-#[derive(PartialEq, Eq, Clone)]
-pub struct Point(ffi::PublicKey);
+#[derive(Clone, PartialEq, Eq)]
+pub struct Point(pub(crate) ffi::PublicKey);
 
-impl Point {
-    #[rustfmt::skip]
-    pub(crate) const ID_BYTES33: [u8; 33] = [
-        0x02,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    ];
-
-    #[rustfmt::skip]
-    pub(crate) const ID_BYTES65: [u8; 65] = [
-        0x04,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    ];
-
-    #[rustfmt::skip]
-    pub(crate) const GENERATOR_BYTES65: [u8; 65] = [
-        0x04,
-        // X
-        0x79, 0xbe, 0x66, 0x7e, 0xf9, 0xdc, 0xbb, 0xac,
-        0x55, 0xa0, 0x62, 0x95, 0xce, 0x87, 0x0b, 0x07,
-        0x02, 0x9b, 0xfc, 0xdb, 0x2d, 0xce, 0x28, 0xd9,
-        0x59, 0xf2, 0x81, 0x5b, 0x16, 0xf8, 0x17, 0x98,
-        // Y
-        0x48, 0x3a, 0xda, 0x77, 0x26, 0xa3, 0xc4, 0x65,
-        0x5d, 0xa4, 0xfb, 0xfc, 0x0e, 0x11, 0x08, 0xa8,
-        0xfd, 0x17, 0xb4, 0x48, 0xa6, 0x85, 0x54, 0x19,
-        0x9c, 0x47, 0xd0, 0x8f, 0xfb, 0x10, 0xd4, 0xb8
-    ];
+impl abs::TrPoint<Secp256k1> for Point {
+    type ScalarT = Scalar;
 
     #[inline]
-    pub fn add(&self, other: &Point) -> Point {
+    fn new_from_bytes(buf: &[u8]) -> Result<Self, &str> {
+        Self::new_from_bytes(buf)
+    }
+
+    #[inline]
+    fn to_bytes(&self) -> Vec<u8> {
+        self.to_bytes33().to_vec()
+    }
+
+    #[inline]
+    fn to_bytes_long(&self) -> Vec<u8> {
+        self.to_bytes65().to_vec()
+    }
+
+    #[inline]
+    fn add(&self, other: &Self) -> Self {
         Self::sum(&[self, other])
     }
 
     #[inline]
-    pub fn sum(points: &[&Point]) -> Point {
-        let mut res = ID.clone();
+    fn sum(points: &[&Self]) -> Self {
+        let mut res = Secp256k1::identity().clone();
         assert!(points.len() <= (i32::MAX as usize));
         let ptrs = {
             let mut res = Vec::new();
             for p in points {
-                if ID.ne(*p) {
+                if *p != Secp256k1::identity() {
                     res.push(*p);
                 }
             }
@@ -74,7 +61,7 @@ impl Point {
     }
 
     #[inline]
-    pub fn neg(&self) -> Point {
+    fn neg(&self) -> Self {
         let mut p = self.clone();
         unsafe {
             let success = ffi::secp256k1_ec_pubkey_negate(thlocal_ctx(), &mut p.0);
@@ -84,87 +71,118 @@ impl Point {
     }
 
     #[inline]
-    pub fn mul_x(&self, other: &Scalar) -> Point {
+    fn add_gx(&self, x: &Scalar) -> Self {
+        let mut p = self.clone();
+        let success =
+            unsafe { ffi::secp256k1_ec_pubkey_tweak_add(thlocal_ctx(), &mut p.0, x.as_c_ptr()) };
+        if success == 1 {
+            return p;
+        } else if x == Secp256k1::zero() {
+            return self.clone();
+        } else if self == Secp256k1::identity() {
+            return Self::new_gx(x);
+        } else {
+            panic!()
+        }
+    }
+
+    #[inline]
+    fn new_gx(x: &Scalar) -> Self {
+        let mut pk = unsafe { ffi::PublicKey::new() };
+        let success =
+            unsafe { ffi::secp256k1_ec_pubkey_create(thlocal_ctx(), &mut pk, x.as_c_ptr()) };
+        if success == 1 {
+            return Self(pk);
+        } else if x == Secp256k1::zero() {
+            return Secp256k1::identity().clone();
+        } else {
+            panic!();
+        }
+    }
+
+    #[inline]
+    fn mul_x(&self, other: &Scalar) -> Point {
         let mut p = self.clone();
         let success = unsafe {
             ffi::secp256k1_ec_pubkey_tweak_mul(thlocal_ctx(), &mut p.0, other.as_c_ptr())
         };
         if success == 1 {
             return p;
-        } else if other.eq(&ZERO) {
-            return ID.clone();
-        } else if self.eq(&ID) {
-            return ID.clone();
+        } else if other == Secp256k1::zero() {
+            return Secp256k1::identity().clone();
+        } else if self == Secp256k1::identity() {
+            return Secp256k1::identity().clone();
         } else {
             panic!()
         }
     }
+}
 
-    #[inline]
-    pub fn add_gx(&self, x: &Scalar) -> Point {
-        let mut p = self.clone();
-        let success =
-            unsafe { ffi::secp256k1_ec_pubkey_tweak_add(thlocal_ctx(), &mut p.0, x.as_c_ptr()) };
-        if success == 1 {
-            return p;
-        } else if x.eq(&ZERO) {
-            return self.clone();
-        } else if self.eq(&ID) {
-            return Point::new_gx(x);
-        } else {
-            panic!()
+impl Serialize for Point {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.to_bytes33().to_vec().serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for Point {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let bytes33: Vec<u8> = Vec::<u8>::deserialize(deserializer)?;
+        let point =
+            Self::new_from_bytes(&bytes33).map_err(|e| serde::de::Error::custom(e.to_string()))?;
+        Ok(point)
+    }
+}
+
+impl Point {
+    #[rustfmt::skip]
+    pub(crate) const ID_BYTES33: [u8; 33] = [
+        0x02,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    ];
+
+    #[rustfmt::skip]
+    pub(crate) const ID_BYTES65: [u8; 65] = [
+        0x04,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    ];
+
+    fn new_from_bytes(data: &[u8]) -> Result<Point, &'static str> {
+        if data.len() != 33 && data.len() != 65 {
+            return Err("Invalid length of point bytes");
         }
-    }
-
-    #[inline]
-    pub(crate) fn new_identity() -> Point {
-        Point(unsafe { ffi::PublicKey::new() })
-    }
-
-    #[inline]
-    pub(crate) fn new_generator() -> Point {
-        Point::new_from_bytes(&Self::GENERATOR_BYTES65).unwrap()
-    }
-
-    #[inline]
-    pub fn new_gx(x: &Scalar) -> Point {
-        let mut pk = unsafe { ffi::PublicKey::new() };
-        let success =
-            unsafe { ffi::secp256k1_ec_pubkey_create(thlocal_ctx(), &mut pk, x.as_c_ptr()) };
-        if success == 1 {
-            return Point(pk);
-        } else if x.eq(&ZERO) {
-            return ID.clone();
-        } else {
-            panic!();
-        }
-    }
-
-    pub fn new_from_bytes(data: &[u8]) -> Resultat<Point> {
-        assert_throw!(data.len() == 33 || data.len() == 65);
         let mut pk = unsafe { ffi::PublicKey::new() };
         let success = unsafe {
             ffi::secp256k1_ec_pubkey_parse(thlocal_ctx(), &mut pk, data.as_c_ptr(), data.len())
         };
         if success != 1 {
             if data.len() == 33 && data == &Self::ID_BYTES33 {
-                return Ok(ID.clone());
+                return Ok(Secp256k1::identity().clone());
             }
             if data.len() == 65 && data == &Self::ID_BYTES65 {
-                return Ok(ID.clone());
+                return Ok(Secp256k1::identity().clone());
             }
-            throw!("", "Invalid point bytes");
+            return Err("Invalid point bytes (not on curve).");
         }
         Ok(Point(pk))
     }
 
-    pub fn to_bytes33(&self) -> Vec<u8> {
+    fn to_bytes33(&self) -> Vec<u8> {
         let mut buf = vec![0u8; 33];
         self.to_bytes_internal(&mut buf, ffi::SECP256K1_SER_COMPRESSED);
         buf
     }
 
-    pub fn to_bytes65(&self) -> Vec<u8> {
+    fn to_bytes65(&self) -> Vec<u8> {
         let mut buf = vec![0u8; 65];
         self.to_bytes_internal(&mut buf, ffi::SECP256K1_SER_UNCOMPRESSED);
         buf
@@ -191,22 +209,16 @@ impl Point {
             }
         }
     }
-
-    pub fn to_hex33(&self) -> String {
-        use hex::ToHex;
-        self.to_bytes33().encode_hex()
-    }
-
-    pub fn to_hex65(&self) -> String {
-        use hex::ToHex;
-        self.to_bytes65().encode_hex()
-    }
 }
 
 impl fmt::LowerHex for Point {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let ser = self.0.underlying_bytes();
-        for ch in &ser[..] {
+        let ser = self.to_bytes65();
+        for ch in &ser[1..33] {
+            write!(f, "{:02x}", *ch)?;
+        }
+        write!(f, "_")?;
+        for ch in &ser[33..] {
             write!(f, "{:02x}", *ch)?;
         }
         Ok(())

@@ -1,5 +1,5 @@
 use secp256k1_sys::{self as ffi, CPtr};
-use std::ptr::NonNull;
+use std::{cell::RefCell, ptr::NonNull};
 
 const FLAGS: ffi::types::c_uint = ffi::SECP256K1_START_SIGN | ffi::SECP256K1_START_VERIFY;
 
@@ -46,4 +46,18 @@ impl Drop for Context {
     fn drop(&mut self) {
         unsafe { ffi::secp256k1_context_destroy(self.0) }
     }
+}
+
+thread_local! {
+    static CTX: RefCell<Option<Context>> = RefCell::new(None);
+}
+
+pub(crate) fn thlocal_ctx() -> *const ffi::Context {
+    CTX.with(|obj| {
+        let mut instance = obj.borrow_mut();
+        if instance.is_none() {
+            *instance = Some(Context::new());
+        }
+        instance.as_ref().unwrap().0.as_ptr()
+    })
 }
