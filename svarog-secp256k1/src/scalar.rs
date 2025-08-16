@@ -80,7 +80,15 @@ impl abs::TrScalar<Secp256k1> for Scalar {
                 other.as_c_ptr(),
             )
         };
-        assert_eq!(success, 1);
+        if success != 1 {
+            if self == Secp256k1::zero() {
+                return other.clone();
+            }
+            if other == Secp256k1::zero() {
+                return self.clone();
+            }
+            assert_eq!(success, 1);
+        }
         x
     }
 
@@ -88,11 +96,13 @@ impl abs::TrScalar<Secp256k1> for Scalar {
     /// $$-x = \mathtt{ord} - x$$.
     fn neg(&self) -> Self {
         let mut x = self.clone();
-        unsafe {
-            let success = ffi::secp256k1_ec_seckey_negate(
-                ffi::secp256k1_context_no_precomp,
-                x.as_mut_c_ptr(),
-            );
+        let success = unsafe {
+            ffi::secp256k1_ec_seckey_negate(ffi::secp256k1_context_no_precomp, x.as_mut_c_ptr())
+        };
+        if success != 1 {
+            if self == Secp256k1::zero() {
+                return Secp256k1::zero().clone();
+            }
             assert_eq!(success, 1);
         }
         x
@@ -109,8 +119,12 @@ impl abs::TrScalar<Secp256k1> for Scalar {
                 other.as_c_ptr(),
             )
         };
-        assert_eq!(success, 1);
-
+        if success != 1 {
+            if self == Secp256k1::zero() || other == Secp256k1::zero() {
+                return Secp256k1::zero().clone();
+            }
+            assert_eq!(success, 1);
+        }
         x
     }
 
