@@ -1,30 +1,24 @@
 use std::iter::Sum;
 
-use curve_abstract::TrPoint;
-use curve25519_dalek::{EdwardsPoint, constants::ED25519_BASEPOINT_TABLE, edwards::SubgroupPoint};
+use curve_abstract::{TrPoint, TrScalar};
+use curve25519_dalek::{ EdwardsPoint, constants::ED25519_BASEPOINT_TABLE, edwards::SubgroupPoint };
 use group::GroupEncoding;
-use serde::{Deserialize, Serialize};
+use serde::{ Deserialize, Serialize };
 
-use crate::{Curve25519, Scalar};
+use crate::{ Curve25519, Scalar };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Point(pub SubgroupPoint);
 
 impl Serialize for Point {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
         let ep = EdwardsPoint::from(self.0);
         ep.serialize(serializer)
     }
 }
 
 impl<'de> Deserialize<'de> for Point {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
         use group::cofactor::CofactorGroup;
         use serde::de::Error;
 
@@ -33,9 +27,7 @@ impl<'de> Deserialize<'de> for Point {
         if obj.is_some().into() {
             Ok(Self(obj.unwrap()))
         } else {
-            Err(Error::custom(
-                "The EdwardPoint is not in the prime-order subgroup",
-            ))
+            Err(Error::custom("The EdwardPoint is not in the prime-order subgroup"))
         }
     }
 }
@@ -73,6 +65,11 @@ impl TrPoint<Curve25519> for Point {
     }
 
     #[inline]
+    fn sub(&self, other: &Self) -> Self {
+        Self(&self.0 - &other.0)
+    }
+
+    #[inline]
     fn sum(points: &[&Self]) -> Self {
         let it: _ = points.iter().map(|x| x.0);
         Self(SubgroupPoint::sum(it))
@@ -86,6 +83,12 @@ impl TrPoint<Curve25519> for Point {
     #[inline]
     fn add_gx(&self, x: &Scalar) -> Self {
         let other = Self::new_gx(x);
+        self.add(&other)
+    }
+
+    #[inline]
+    fn sub_gx(&self, x: &Scalar) -> Self {
+        let other = Self::new_gx(&x.neg());
         self.add(&other)
     }
 

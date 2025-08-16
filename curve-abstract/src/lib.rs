@@ -26,6 +26,7 @@ pub trait TrScalar<C: TrCurve>:
 
     fn add(&self, other: &Self) -> Self;
     fn neg(&self) -> Self;
+    fn sub(&self, other: &Self) -> Self;
     fn mul(&self, other: &Self) -> Self;
     fn inv_ct(&self) -> Self;
     fn inv_vt(&self) -> Self;
@@ -43,7 +44,9 @@ pub trait TrPoint<C: TrCurve>:
     fn add(&self, other: &Self) -> Self;
     fn sum(points: &[&Self]) -> Self;
     fn neg(&self) -> Self;
+    fn sub(&self, other: &Self) -> Self;
     fn add_gx(&self, x: &C::ScalarT) -> Self;
+    fn sub_gx(&self, x: &C::ScalarT) -> Self;
     fn new_gx(x: &C::ScalarT) -> Self;
     fn mul_x(&self, x: &C::ScalarT) -> Self;
 }

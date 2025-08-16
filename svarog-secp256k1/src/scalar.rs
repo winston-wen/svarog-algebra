@@ -1,8 +1,8 @@
-use curve_abstract::{self as abs, TrCurve};
-use secp256k1_sys::{self as ffi, CPtr};
-use serde::{Deserialize, Serialize};
+use curve_abstract::{ self as abs, TrCurve };
+use secp256k1_sys::{ self as ffi, CPtr };
+use serde::{ Deserialize, Serialize };
 
-use crate::{CURVE_ORDER_WORDS, Secp256k1};
+use crate::{ CURVE_ORDER_WORDS, Secp256k1 };
 
 #[derive(Clone, Debug)]
 pub struct Scalar(pub(crate) [u8; 32]);
@@ -35,11 +35,7 @@ impl abs::TrScalar<Secp256k1> for Scalar {
     // Big-endian, last 32 bytes.
     fn new_from_bytes(buf: &[u8]) -> Self {
         let mut num = [0u8; 32];
-        let (dst, src) = if buf.len() >= 32 {
-            (0, buf.len() - 32)
-        } else {
-            (32 - buf.len(), 0)
-        };
+        let (dst, src) = if buf.len() >= 32 { (0, buf.len() - 32) } else { (32 - buf.len(), 0) };
         if buf.len() > 0 {
             num[dst..].copy_from_slice(&buf[src..]);
         }
@@ -77,7 +73,7 @@ impl abs::TrScalar<Secp256k1> for Scalar {
             ffi::secp256k1_ec_seckey_tweak_add(
                 ffi::secp256k1_context_no_precomp,
                 x.as_mut_c_ptr(),
-                other.as_c_ptr(),
+                other.as_c_ptr()
             )
         };
         if success != 1 {
@@ -109,6 +105,11 @@ impl abs::TrScalar<Secp256k1> for Scalar {
     }
 
     #[inline]
+    fn sub(&self, other: &Self) -> Self {
+        self.add(&other.neg())
+    }
+
+    #[inline]
     fn mul(&self, other: &Self) -> Self {
         let mut x = self.clone();
 
@@ -116,7 +117,7 @@ impl abs::TrScalar<Secp256k1> for Scalar {
             ffi::secp256k1_ec_seckey_tweak_mul(
                 ffi::secp256k1_context_no_precomp,
                 x.as_mut_c_ptr(),
-                other.as_c_ptr(),
+                other.as_c_ptr()
             )
         };
         if success != 1 {
@@ -166,19 +167,13 @@ impl abs::TrScalar<Secp256k1> for Scalar {
 }
 
 impl Serialize for Scalar {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
         self.0.serialize(serializer)
     }
 }
 
 impl<'de> Deserialize<'de> for Scalar {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
         let inner: [u8; 32] = <[u8; 32]>::deserialize(deserializer)?;
         if inner.as_ref() >= Secp256k1::curve_order() {
             Err(serde::de::Error::custom("buf >= curve_order"))
@@ -192,8 +187,7 @@ impl PartialEq for Scalar {
     /// This implementation is designed to be constant time to help prevent side channel attacks.
     #[inline]
     fn eq(&self, other: &Self) -> bool {
-        let accum = self
-            .0
+        let accum = self.0
             .iter()
             .zip(&other.0)
             .fold(0, |accum, (a, b)| accum | (a ^ b));
