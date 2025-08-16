@@ -35,13 +35,13 @@ impl abs::TrScalar<Secp256k1> for Scalar {
     // Big-endian, last 32 bytes.
     fn new_from_bytes(buf: &[u8]) -> Self {
         let mut num = [0u8; 32];
-        let (src, dst) = if buf.len() >= 32 {
+        let (dst, src) = if buf.len() >= 32 {
             (0, buf.len() - 32)
         } else {
             (32 - buf.len(), 0)
         };
         if buf.len() > 0 {
-            num[src..].copy_from_slice(&buf[dst..]);
+            num[dst..].copy_from_slice(&buf[src..]);
         }
         if num.as_ref() > Secp256k1::curve_order() {
             // ... then we have `num % CURVE_ORDER == num - CURVE_ORDER`.
