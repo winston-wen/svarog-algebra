@@ -36,8 +36,6 @@ pub trait TrPoint<C: TrCurve>:
     Clone + Debug + PartialEq + Eq + Send + Sync +
     Serialize + for<'de> Deserialize<'de>
 {
-    type ScalarT: TrScalar<C>;
-
     fn new_from_bytes(buf: &[u8]) -> Result<Self, &str>;
     fn to_bytes(&self) -> Vec<u8>;
     fn to_bytes_long(&self) -> Vec<u8>;
@@ -45,7 +43,7 @@ pub trait TrPoint<C: TrCurve>:
     fn add(&self, other: &Self) -> Self;
     fn sum(points: &[&Self]) -> Self;
     fn neg(&self) -> Self;
-    fn add_gx(&self, x: &Self::ScalarT) -> Self;
-    fn new_gx(x: &Self::ScalarT) -> Self;
-    fn mul_x(&self, x: &Self::ScalarT) -> Self;
+    fn add_gx(&self, x: &C::ScalarT) -> Self;
+    fn new_gx(x: &C::ScalarT) -> Self;
+    fn mul_x(&self, x: &C::ScalarT) -> Self;
 }

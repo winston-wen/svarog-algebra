@@ -41,8 +41,6 @@ impl<'de> Deserialize<'de> for Point {
 }
 
 impl TrPoint<Curve25519> for Point {
-    type ScalarT = Scalar;
-
     #[inline]
     fn new_from_bytes(buf: &[u8]) -> Result<Self, &str> {
         if buf.len() != 32 {
@@ -86,13 +84,13 @@ impl TrPoint<Curve25519> for Point {
     }
 
     #[inline]
-    fn add_gx(&self, x: &Self::ScalarT) -> Self {
+    fn add_gx(&self, x: &Scalar) -> Self {
         let other = Self::new_gx(x);
         self.add(&other)
     }
 
     #[inline]
-    fn new_gx(x: &Self::ScalarT) -> Self {
+    fn new_gx(x: &Scalar) -> Self {
         use group::cofactor::CofactorGroup;
 
         let ep = ED25519_BASEPOINT_TABLE * &x.0;
@@ -100,7 +98,7 @@ impl TrPoint<Curve25519> for Point {
     }
 
     #[inline]
-    fn mul_x(&self, x: &Self::ScalarT) -> Self {
+    fn mul_x(&self, x: &Scalar) -> Self {
         Self(&self.0 * &x.0)
     }
 }
