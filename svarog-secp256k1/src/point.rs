@@ -10,8 +10,6 @@ use crate::{Scalar, Secp256k1, thlocal_ctx};
 pub struct Point(pub(crate) ffi::PublicKey);
 
 impl abs::TrPoint<Secp256k1> for Point {
-    type ScalarT = Scalar;
-
     #[inline]
     fn new_from_bytes(buf: &[u8]) -> Result<Self, &str> {
         Self::new_from_bytes(buf)
