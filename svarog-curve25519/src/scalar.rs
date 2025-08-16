@@ -19,7 +19,7 @@ impl TrScalar<Curve25519> for Scalar {
     }
 
     #[inline]
-    fn new_rand(rng: &mut (impl rand::Rng + ?Sized)) -> Self {
+    fn new_rand<R: rand::Rng + ?Sized>(rng: &mut R) -> Self {
         let mut buf = [0u8; 64];
         rng.fill_bytes(&mut buf);
         Self::new_from_bytes(&buf)

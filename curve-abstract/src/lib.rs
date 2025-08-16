@@ -20,7 +20,7 @@ pub trait TrScalar<C: TrCurve>:
     Serialize + for<'de> Deserialize<'de>
 {
     fn new(n: i64) -> Self;
-    fn new_rand(rng: &mut (impl rand::Rng + ?Sized)) -> Self;
+    fn new_rand<R: rand::Rng + ?Sized>(rng: &mut R) -> Self;
     fn new_from_bytes(buf: &[u8]) -> Self;
     fn to_bytes(&self) -> Vec<u8>;
 

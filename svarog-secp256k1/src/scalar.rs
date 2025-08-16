@@ -26,7 +26,7 @@ impl abs::TrScalar<Secp256k1> for Scalar {
         res
     }
 
-    fn new_rand(rng: &mut (impl rand::Rng + ?Sized)) -> Self {
+    fn new_rand<R: rand::Rng + ?Sized>(rng: &mut R) -> Self {
         let mut num = [0u8; 32];
         rng.fill(&mut num);
         Self::new_from_bytes(&num)
