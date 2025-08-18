@@ -56,7 +56,7 @@ version = "0.1.0"
 dependencies = [
  "erreur",
  "once_cell",
- "rug 1.27.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rug",
  "serde",
 ]
 
@@ -356,19 +356,6 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_test",
-]
-
-[[package]]
-name = "rug"
-version = "1.27.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "4207e8d668e5b8eb574bda8322088ccd0d7782d3d03c7e8d562e82ed82bdcbc3"
-dependencies = [
- "az",
- "gmp-mpfr-sys",
- "libc",
- "libm",
- "serde",
 ]
 
 [[package]]
