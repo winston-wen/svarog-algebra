@@ -1,8 +1,10 @@
 [workspace]
 members = [
+    "classgroup",
+    "curve-abstract",
     "rug-1.27.0",
-    "svarog-classgroup",
+    "secp256k1-sys",
+    "svarog-curve25519",
     "svarog-secp256k1",
-    "secp256k1-sys", "curve-abstract", "svarog-curve25519",
 ]
 resolver = "3"

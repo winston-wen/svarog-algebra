@@ -1,6 +1,6 @@
 use curve_abstract::TrScalar;
 use curve25519_dalek::Scalar as EdwardScalar;
-use serde::{ Deserialize, Serialize };
+use serde::{Deserialize, Serialize};
 
 use crate::Curve25519;
 
@@ -62,7 +62,11 @@ impl TrScalar<Curve25519> for Scalar {
 
     #[inline]
     fn inv_ct(&self) -> Self {
-        if self.0 == EdwardScalar::ZERO { Self(EdwardScalar::ZERO) } else { Self(self.0.invert()) }
+        if self.0 == EdwardScalar::ZERO {
+            Self(EdwardScalar::ZERO)
+        } else {
+            Self(self.0.invert())
+        }
     }
 
     #[inline]

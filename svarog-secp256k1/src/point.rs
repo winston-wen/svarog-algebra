@@ -1,10 +1,10 @@
 use std::fmt;
 
-use curve_abstract::{ self as abs, TrCurve, TrScalar };
-use secp256k1_sys::{ self as ffi, CPtr, types::c_uint };
-use serde::{ Deserialize, Serialize };
+use curve_abstract::{self as abs, TrCurve, TrScalar};
+use secp256k1_sys::{self as ffi, CPtr, types::c_uint};
+use serde::{Deserialize, Serialize};
 
-use crate::{ Scalar, Secp256k1, thlocal_ctx };
+use crate::{Scalar, Secp256k1, thlocal_ctx};
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct Point(pub(crate) ffi::PublicKey);
@@ -76,9 +76,8 @@ impl abs::TrPoint<Secp256k1> for Point {
     #[inline]
     fn add_gx(&self, x: &Scalar) -> Self {
         let mut p = self.clone();
-        let success = unsafe {
-            ffi::secp256k1_ec_pubkey_tweak_add(thlocal_ctx(), &mut p.0, x.as_c_ptr())
-        };
+        let success =
+            unsafe { ffi::secp256k1_ec_pubkey_tweak_add(thlocal_ctx(), &mut p.0, x.as_c_ptr()) };
         if success == 1 {
             return p;
         } else if x == Secp256k1::zero() {
@@ -99,9 +98,8 @@ impl abs::TrPoint<Secp256k1> for Point {
     #[inline]
     fn new_gx(x: &Scalar) -> Self {
         let mut pk = unsafe { ffi::PublicKey::new() };
-        let success = unsafe {
-            ffi::secp256k1_ec_pubkey_create(thlocal_ctx(), &mut pk, x.as_c_ptr())
-        };
+        let success =
+            unsafe { ffi::secp256k1_ec_pubkey_create(thlocal_ctx(), &mut pk, x.as_c_ptr()) };
         if success == 1 {
             return Self(pk);
         } else if x == Secp256k1::zero() {
@@ -130,17 +128,22 @@ impl abs::TrPoint<Secp256k1> for Point {
 }
 
 impl Serialize for Point {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error> where S: serde::Serializer {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
         self.to_bytes33().to_vec().serialize(serializer)
     }
 }
 
 impl<'de> Deserialize<'de> for Point {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
         let bytes33: Vec<u8> = Vec::<u8>::deserialize(deserializer)?;
-        let point = Self::new_from_bytes(&bytes33).map_err(|e|
-            serde::de::Error::custom(e.to_string())
-        )?;
+        let point =
+            Self::new_from_bytes(&bytes33).map_err(|e| serde::de::Error::custom(e.to_string()))?;
         Ok(point)
     }
 }
@@ -202,7 +205,7 @@ impl Point {
                 ret.as_mut_c_ptr(),
                 &mut n,
                 &self.0,
-                compression
+                compression,
             )
         };
         if success != 1 {
