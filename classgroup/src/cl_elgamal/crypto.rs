@@ -1,4 +1,5 @@
 use rug::{Integer, rand::RandState};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     cl_elgamal::{ClSettings, derive_c_from_abd},
@@ -37,6 +38,7 @@ pub fn log_f(fm: &QuadForm, ctx: &ClSettings) -> Integer {
     m
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
 pub struct ClCiphertext {
     pub gr: QuadForm,
     pub hrfm: QuadForm,
