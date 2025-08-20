@@ -9,6 +9,12 @@ use crate::{Scalar, Secp256k1, thlocal_ctx};
 #[derive(Clone, PartialEq, Eq)]
 pub struct Point(pub(crate) ffi::PublicKey);
 
+impl Default for Point {
+    fn default() -> Self {
+        Secp256k1::identity().clone()
+    }
+}
+
 impl abs::TrPoint<Secp256k1> for Point {
     #[inline]
     fn new_from_bytes(buf: &[u8]) -> Result<Self, &str> {

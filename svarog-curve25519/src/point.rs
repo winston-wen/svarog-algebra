@@ -1,6 +1,6 @@
 use std::iter::Sum;
 
-use curve_abstract::{TrPoint, TrScalar};
+use curve_abstract::{TrCurve, TrPoint, TrScalar};
 use curve25519_dalek::{EdwardsPoint, constants::ED25519_BASEPOINT_TABLE, edwards::SubgroupPoint};
 use group::GroupEncoding;
 use serde::{Deserialize, Serialize};
@@ -9,6 +9,12 @@ use crate::{Curve25519, Scalar};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Point(pub SubgroupPoint);
+
+impl Default for Point {
+    fn default() -> Self {
+        Curve25519::identity().clone()
+    }
+}
 
 impl Serialize for Point {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

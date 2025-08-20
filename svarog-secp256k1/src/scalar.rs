@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{CURVE_ORDER_WORDS, Secp256k1};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Scalar(pub(crate) [u8; 32]);
 
 impl abs::TrScalar<Secp256k1> for Scalar {

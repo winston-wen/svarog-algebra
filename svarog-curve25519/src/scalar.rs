@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::Curve25519;
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct Scalar(pub EdwardScalar);
 
 impl TrScalar<Curve25519> for Scalar {
