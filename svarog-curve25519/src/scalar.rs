@@ -1,5 +1,6 @@
 use curve_abstract::TrScalar;
 use curve25519_dalek::Scalar as EdwardScalar;
+use rand::RngCore;
 use serde::{Deserialize, Serialize};
 
 use crate::Curve25519;
@@ -19,7 +20,8 @@ impl TrScalar<Curve25519> for Scalar {
     }
 
     #[inline]
-    fn new_rand<R: rand::Rng + ?Sized>(rng: &mut R) -> Self {
+    fn new_rand() -> Self {
+        let mut rng = rand::rng();
         let mut buf = [0u8; 64];
         rng.fill_bytes(&mut buf);
         Self::new_from_bytes(&buf)

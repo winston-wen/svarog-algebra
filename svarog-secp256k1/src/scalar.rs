@@ -1,4 +1,5 @@
 use curve_abstract::{self as abs, TrCurve};
+use rand::RngCore;
 use secp256k1_sys::{self as ffi, CPtr};
 use serde::{Deserialize, Serialize};
 
@@ -26,9 +27,10 @@ impl abs::TrScalar<Secp256k1> for Scalar {
         res
     }
 
-    fn new_rand<R: rand::Rng + ?Sized>(rng: &mut R) -> Self {
+    fn new_rand() -> Self {
+        let mut rng = rand::rng();
         let mut num = [0u8; 32];
-        rng.fill(&mut num);
+        rng.fill_bytes(&mut num);
         Self::new_from_bytes(&num)
     }
 

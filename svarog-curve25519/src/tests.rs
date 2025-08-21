@@ -11,14 +11,12 @@ fn test_sign_verify() {
     use serde_cbor;
     use tempfile::tempfile;
 
-    let mut _rng = rand::rng();
-    let rng: &mut _ = &mut _rng;
     let m = Scalar::new(114514);
 
     // Alice keygen
-    let x = Scalar::new_rand(rng);
+    let x = Scalar::new_rand();
     let Q = Point::new_gx(&x);
-    let r = Scalar::new_rand(rng);
+    let r = Scalar::new_rand();
     let R = Point::new_gx(&r);
     let s = r.add(&m.mul(&x));
 

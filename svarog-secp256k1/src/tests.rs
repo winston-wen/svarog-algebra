@@ -3,9 +3,6 @@ use curve_abstract::*;
 
 #[test]
 fn test_scalar() {
-    let mut _rng = rand::rng();
-    let rng = &mut _rng;
-
     // test add
     let a = Scalar::new(114514);
     let b = Scalar::new(-1919);
@@ -27,7 +24,7 @@ fn test_scalar() {
 
     // test inv
     let one = Scalar::new(1);
-    let a = Scalar::new_rand(rng);
+    let a = Scalar::new_rand();
     let b = a.inv_ct();
     let c = a.inv_vt();
     assert_eq!(b, c);
@@ -60,9 +57,9 @@ fn test_point() {
     assert_eq!(&p, Secp256k1::generator());
 
     // new random point addition
-    let x1 = Scalar::new_rand(rng);
+    let x1 = Scalar::new_rand();
     let p1 = Point::new_gx(&x1);
-    let x2 = Scalar::new_rand(rng);
+    let x2 = Scalar::new_rand();
     let p2 = Point::new_gx(&x2);
     let p31 = p1.add(&p2);
     let p32 = p2.add(&p1);
@@ -76,7 +73,7 @@ fn test_point() {
     assert_ne!(&p30, Secp256k1::identity());
 
     // new random point add 0
-    let x = Scalar::new_rand(rng);
+    let x = Scalar::new_rand();
     let p0 = Point::new_gx(&x);
     let p1 = p0.add_gx(Secp256k1::zero());
     let p2 = Secp256k1::identity().add_gx(&x);
@@ -90,7 +87,7 @@ fn test_point() {
     assert_ne!(&p0, Secp256k1::identity());
 
     // new random points sum to 0
-    let x = Scalar::new_rand(rng);
+    let x = Scalar::new_rand();
     let p0 = Secp256k1::identity().clone();
     let p1 = Point::new_gx(&x);
     let p2 = Point::new_gx(&x.neg());
@@ -104,8 +101,8 @@ fn test_point() {
     assert_eq!(p33, p0);
 
     // new random points multiply.
-    let x1 = Scalar::new_rand(rng);
-    let x2 = Scalar::new_rand(rng);
+    let x1 = Scalar::new_rand();
+    let x2 = Scalar::new_rand();
     let p1 = Point::new_gx(&x1).mul_x(&x2);
     let p2 = Point::new_gx(&x2).mul_x(&x1);
     let p0 = Point::new_gx(&x1.mul(&x2));
@@ -114,7 +111,7 @@ fn test_point() {
     assert_ne!(p0, Secp256k1::identity().clone());
 
     // new random point multiply 0.
-    let x = Scalar::new_rand(rng);
+    let x = Scalar::new_rand();
     let p1 = Point::new_gx(&x).mul_x(Secp256k1::zero());
     let p2 = Secp256k1::identity().mul_x(&x);
     assert_eq!(p1, Secp256k1::identity().clone());
@@ -126,11 +123,8 @@ fn test_point() {
 
 #[test]
 fn test_points_fromto_bytes() {
-    let mut _rng = rand::rng();
-    let rng = &mut _rng;
-
     {
-        let p = Point::new_gx(&Scalar::new_rand(rng));
+        let p = Point::new_gx(&Scalar::new_rand());
 
         let buf1 = p.to_bytes();
         assert_eq!(buf1.len(), 33);
