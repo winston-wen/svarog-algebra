@@ -4,7 +4,9 @@ use crate::{Point, Scalar};
 
 use curve_abstract::{self as abs, TrPoint};
 use secp256k1_sys as ffi;
+use serde::{Deserialize, Serialize};
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Secp256k1 {}
 
 impl abs::TrCurve for Secp256k1 {

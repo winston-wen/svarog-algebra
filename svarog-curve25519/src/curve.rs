@@ -3,9 +3,11 @@ use std::sync::LazyLock;
 use curve_abstract::TrCurve;
 use curve25519_dalek::{Scalar as EdwardsScalar, edwards::SubgroupPoint};
 use group::Group;
+use serde::{Deserialize, Serialize};
 
 use crate::{Point, Scalar};
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub enum Curve25519 {}
 
 impl TrCurve for Curve25519 {
