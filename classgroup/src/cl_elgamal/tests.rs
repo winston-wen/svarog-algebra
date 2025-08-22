@@ -59,18 +59,18 @@ fn test_mta() {
     use rug::rand::RandState;
     let mut rng = RandState::new();
     let p: Integer = Integer::from(2).pow(251) - 1;
-    let v21 = p.clone().random_below(&mut rng);
-    let k1 = p.clone().random_below(&mut rng);
-    let w2 = p.clone().random_below(&mut rng);
+    let vji = p.clone().random_below(&mut rng);
+    let ki = p.clone().random_below(&mut rng);
+    let wj = p.clone().random_below(&mut rng);
 
-    let (sk1, pk1) = keygen(&ctx);
-    let k1_ct = ClCiphertext::encrypt(&k1, &pk1, &ctx);
-    // [u21] + v21 == [k1] * w2
-    let neg_v21 = Integer::from(-&v21);
-    let u21_ct = k1_ct.mul_pt(&w2, &ctx).add_pt(&neg_v21, &ctx);
+    let (sk, pk) = keygen(&ctx);
+    let ki_ct = ClCiphertext::encrypt(&ki, &pk, &ctx);
+    // [uji] + vji == [kj] * wi
+    let neg_vji = Integer::from(-&vji);
+    let uji_ct = ki_ct.mul_pt(&wj, &ctx).add_pt(&neg_vji, &ctx);
 
-    let u21_dec = u21_ct.decrypt(&sk1, &ctx);
-    let lhs = u21_dec + v21;
-    let rhs = k1 * w2 % ctx.p;
+    let uji_dec = uji_ct.decrypt(&sk, &ctx);
+    let lhs = (uji_dec + vji) % ctx.p;
+    let rhs = ki * wj % ctx.p;
     assert_eq!(lhs, rhs);
 }
