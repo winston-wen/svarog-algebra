@@ -89,7 +89,7 @@ impl ClCiphertext {
             hrfm: self.hrfm.mul(&exp_f(other, ctx)),
         }
     }
-
+    
     pub fn mul_pt(
         &self,
         other: &Integer, //
