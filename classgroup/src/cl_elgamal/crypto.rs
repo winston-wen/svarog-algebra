@@ -20,21 +20,25 @@ pub fn keygen(ctx: &ClSettings) -> (Integer, QuadForm) {
 // bypassing the procedure of quadform composition.
 pub fn exp_f(m: &Integer, ctx: &ClSettings) -> QuadForm {
     let psquare = &ctx.f.0;
-    let minv = {
-        let mut x = m.clone().invert(ctx.p).unwrap();
-        if x.is_even() {
-            x = Integer::from(&x - ctx.p);
-        }
-        x
-    };
-    let b = Integer::from(&minv * ctx.p);
+    let m = m.clone().modulo(ctx.p);
+    if m.is_zero() {
+        return ctx.id.clone();
+    }
+    let mut inv_m = m.clone().invert(ctx.p).unwrap();
+    if inv_m.is_even() {
+        inv_m -= ctx.p;
+    }
+    let b = Integer::from(&inv_m * ctx.p);
     let c = derive_c_from_abd(&psquare, &b, ctx.delta_p);
     QuadForm(psquare.clone(), b, c)
 }
 
 pub fn log_f(fm: &QuadForm, ctx: &ClSettings) -> Integer {
-    let minv = Integer::from(&fm.1 / ctx.p);
-    let m = minv.invert(ctx.p).unwrap();
+    if fm == ctx.id {
+        return Integer::new();
+    }
+    let inv_m = Integer::from(&fm.1 / ctx.p);
+    let m = inv_m.invert(ctx.p).unwrap();
     m
 }
 
@@ -89,7 +93,7 @@ impl ClCiphertext {
             hrfm: self.hrfm.mul(&exp_f(other, ctx)),
         }
     }
-    
+
     pub fn mul_pt(
         &self,
         other: &Integer, //

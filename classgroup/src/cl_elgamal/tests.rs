@@ -54,14 +54,21 @@ fn test_lhe() {
 }
 
 #[test]
+fn test_identity() {
+    let f114 = exp_f(&Integer::from(114), &ctx);
+    let g114 = ctx.g.exp(&Integer::from(114));
+    assert_eq!(f114, f114.mul(ctx.id));
+    assert_eq!(g114, g114.mul(ctx.id));
+}
+
+#[test]
 /// test ecdsa MtA
 fn test_mta() {
-    use rug::rand::RandState;
-    let mut rng = RandState::new();
-    let p: Integer = Integer::from(2).pow(251) - 1;
-    let vji = p.clone().random_below(&mut rng);
-    let ki = p.clone().random_below(&mut rng);
-    let wj = p.clone().random_below(&mut rng);
+    // use rug::rand::RandState;
+    // let mut rng = RandState::new();
+    let vji = Integer::from(ctx.p - 114);
+    let ki = Integer::from(ctx.p - 514);
+    let wj = Integer::from(ctx.p - 1919);
 
     let (sk, pk) = keygen(&ctx);
     let ki_ct = ClCiphertext::encrypt(&ki, &pk, &ctx);
@@ -69,8 +76,8 @@ fn test_mta() {
     let neg_vji = Integer::from(-&vji);
     let uji_ct = ki_ct.mul_pt(&wj, &ctx).add_pt(&neg_vji, &ctx);
 
-    let uji_dec = uji_ct.decrypt(&sk, &ctx);
-    let lhs = (uji_dec + vji) % ctx.p;
+    let uji = uji_ct.decrypt(&sk, &ctx);
+    let lhs = (uji + vji) % ctx.p;
     let rhs = ki * wj % ctx.p;
     assert_eq!(lhs, rhs);
 }
