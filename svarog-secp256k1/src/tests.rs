@@ -49,9 +49,6 @@ fn test_scalar() {
 
 #[test]
 fn test_point() {
-    let mut _rng = rand::rng();
-    let rng = &mut _rng;
-
     // new identity point
     let p = Point::new_gx(Secp256k1::one());
     assert_eq!(&p, Secp256k1::generator());

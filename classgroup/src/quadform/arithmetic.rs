@@ -29,7 +29,11 @@ impl QuadForm {
         let (a, b, c) = (&self.0, &self.1, &self.2);
         let mut gcd = Integer::from(1);
         let _ = self.is_primitive(Some(&mut gcd));
-        QuadForm(a.clone() / gcd.clone(), b.clone() / gcd.clone(), c.clone() / gcd.clone())
+        QuadForm(
+            a.clone() / gcd.clone(),
+            b.clone() / gcd.clone(),
+            c.clone() / gcd.clone(),
+        )
     }
 
     #[inline]
@@ -76,13 +80,12 @@ impl QuadForm {
         let (mut a, mut b, mut c) = (self.0.clone(), self.1.clone(), self.2.clone());
 
         loop {
-            if (
-                {
-                    // Step 1. Initialize.
-                    let neg_a = Integer::from(-&a);
-                    &neg_a < &b && &b <= &a
-                }
-            ) {
+            // Step 1. Initialize.
+            let cond = {
+                let neg_a = Integer::from(-&a);
+                &neg_a < &b && &b <= &a
+            };
+            if cond {
                 // Step 3.
                 if &a > &c {
                     (a, b, c) = (c, -b, a);
