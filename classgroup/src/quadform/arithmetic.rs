@@ -6,12 +6,14 @@ pub struct QuadForm(pub Integer, pub Integer, pub Integer);
 
 impl QuadForm {
     // Compute $$\Delta = b^2-4ac$$.
+    #[inline]
     pub fn discriminant(&self) -> Integer {
         let (a, b, c) = (&self.0, &self.1, &self.2);
         Integer::from(b ^ 2) - Integer::from(a * c) * 4
     }
 
     // Check if $$\gcd(a, b, c) = 1$$.
+    #[inline]
     pub fn is_primitive(&self, gcd_abc: Option<&mut Integer>) -> bool {
         let (a, b, c) = (&self.0, &self.1, &self.2);
         let mut gcd = a.clone().gcd(b);
@@ -22,17 +24,15 @@ impl QuadForm {
         gcd == 1
     }
 
+    #[inline]
     pub fn to_primitive(&self) -> QuadForm {
         let (a, b, c) = (&self.0, &self.1, &self.2);
         let mut gcd = Integer::from(1);
         let _ = self.is_primitive(Some(&mut gcd));
-        QuadForm(
-            a.clone() / gcd.clone(),
-            b.clone() / gcd.clone(),
-            c.clone() / gcd.clone(),
-        )
+        QuadForm(a.clone() / gcd.clone(), b.clone() / gcd.clone(), c.clone() / gcd.clone())
     }
 
+    #[inline]
     pub fn is_posdef(&self) -> bool {
         let (a, _b, _c) = (&self.0, &self.1, &self.2);
         let delta = self.discriminant();
@@ -41,6 +41,7 @@ impl QuadForm {
 
     // Check if the form is reduced.
     // Assumptions: positive definite.
+    #[inline]
     pub fn is_reduced(&self) -> bool {
         let (a, b, c) = (&self.0, &self.1, &self.2);
 
@@ -60,11 +61,12 @@ impl QuadForm {
         ret
     }
 
+    #[inline]
     pub fn identity(&self) -> QuadForm {
         let delta = self.discriminant();
         let c = Integer::from(1) - delta;
         let c = c / 4;
-        QuadForm(1.into(), 1.into(), c)
+        QuadForm((1).into(), (1).into(), c)
     }
 
     // [Cohen1993, Algorithm 5.4.2]
@@ -74,11 +76,13 @@ impl QuadForm {
         let (mut a, mut b, mut c) = (self.0.clone(), self.1.clone(), self.2.clone());
 
         loop {
-            if {
-                // Step 1. Initialize.
-                let neg_a = Integer::from(-&a);
-                &neg_a < &b && &b <= &a
-            } {
+            if (
+                {
+                    // Step 1. Initialize.
+                    let neg_a = Integer::from(-&a);
+                    &neg_a < &b && &b <= &a
+                }
+            ) {
                 // Step 3.
                 if &a > &c {
                     (a, b, c) = (c, -b, a);
@@ -98,14 +102,14 @@ impl QuadForm {
                 r -= &double_a;
                 q += 1;
             }
-            c -= Integer::from(&b + &r) * &q / 2;
+            c -= (Integer::from(&b + &r) * &q) / 2;
             b = r;
         }
     }
 
     // [Cohen1993, Algorithm 5.4.7] (not NUCOMP)
     // NUCOMP is [Cohen1993, Algorithm 5.4.9]
-    pub fn mul(&self, other: &QuadForm) -> QuadForm {
+    pub fn mul_naive(&self, other: &QuadForm) -> QuadForm {
         let (mut a1, mut b1, mut c1) = (self.0.clone(), self.1.clone(), self.2.clone());
         let (mut a2, mut b2, mut c2) = (other.0.clone(), other.1.clone(), other.2.clone());
 
@@ -128,7 +132,7 @@ impl QuadForm {
         } else {
             // Solve Bezout equation such that $$x_1a_1 + y_1a_2 = d = \gcd(a_1, a_2)$$.
             (d, _, y1) = a1.clone().extended_gcd(a2.clone(), Integer::new());
-        };
+        }
 
         // Step 3. Second Euclidean step.
         let (x2, y2, d1) = if s.clone() % d.clone() == 0 {
@@ -157,10 +161,17 @@ impl QuadForm {
         f3.reduce()
     }
 
-    pub fn square(&self) -> QuadForm {
-        self.mul(self)
+    /// TODO: implement NUCOMP
+    pub fn mul(&self, other: &QuadForm) -> QuadForm {
+        self.mul_naive(other)
     }
 
+    /// TODO: implement NUDUPL
+    pub fn square(&self) -> QuadForm {
+        self.mul_naive(self)
+    }
+
+    #[inline]
     pub fn inv(&self) -> QuadForm {
         let mut f2 = self.clone();
         f2.1 = -f2.1; // negate B.
@@ -179,7 +190,7 @@ impl QuadForm {
         while expo.is_positive() {
             if expo.get_bit(0) {
                 // if the least bit is 1.
-                res = base.mul(&res)
+                res = base.mul(&res);
             }
             base = base.square();
             expo >>= 1;

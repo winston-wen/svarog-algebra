@@ -1,4 +1,4 @@
-use rug::{Integer, ops::Pow};
+use rug::Integer;
 
 use crate::cl_elgamal::{setup_1827bit::CTX as ctx, *};
 
@@ -35,14 +35,14 @@ fn test_lhe() {
         let ct = ct1.add_ct(&ct2, &ctx);
         let m_gt = Integer::from(&m1 + &m2).modulo(ctx.p);
         let m_eval = ct.decrypt(&x, &ctx);
-        assert_eq!(m_gt, m_eval)
+        assert_eq!(m_gt, m_eval);
     }
 
     '_test_add_pt: {
         let ct = ClCiphertext::encrypt(&m1, &h, &ctx).add_pt(&m2, &ctx);
         let m_gt = Integer::from(&m1 + &m2).modulo(ctx.p);
         let m_eval = ct.decrypt(&x, &ctx);
-        assert_eq!(m_gt, m_eval)
+        assert_eq!(m_gt, m_eval);
     }
 
     '_test_mul_pt: {
@@ -78,6 +78,31 @@ fn test_mta() {
 
     let uji = uji_ct.decrypt(&sk, &ctx);
     let lhs = (uji + vji) % ctx.p;
-    let rhs = ki * wj % ctx.p;
+    let rhs = (ki * wj) % ctx.p;
     assert_eq!(lhs, rhs);
+}
+
+#[test]
+fn bench_exp() {
+    use rug::Integer;
+    use rug::rand::RandState;
+
+    let mut t_ms: u128 = 0;
+    let n: u128 = 100;
+    for _ in 0..n {
+        let mut rand = RandState::new();
+        let e = Integer::from(Integer::random_bits(256, &mut rand));
+        let timer = std::time::Instant::now();
+        let _ = ctx.g.exp(&e);
+        t_ms += timer.elapsed().as_millis();
+    }
+    let avg = t_ms / n;
+    let rem = t_ms % n;
+    println!("QuadForm::exp(&self) average time on 256-bit integers: {avg}.{rem:01} ms")
+}
+
+#[test]
+fn show_log2_of_order() {
+    let ord_len = ctx.order_g.significant_bits();
+    println!("{ord_len}"); // 1083
 }
