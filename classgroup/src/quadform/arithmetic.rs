@@ -1,23 +1,43 @@
+use std::marker::PhantomData;
+
 use super::*;
 use rug::Integer;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
-pub struct QuadForm(pub Integer, pub Integer, pub Integer);
+pub struct QuadForm<Delta>
+where
+    Delta: TrDiscriminant + Clone,
+{
+    pub a: Integer,
+    pub b: Integer,
+    D: PhantomData<Delta>,
+}
 
-impl QuadForm {
-    // Compute $$\Delta = b^2-4ac$$.
+impl<T: TrDiscriminant + Clone> QuadForm<T> {
+    pub fn new(a: impl Into<Integer>, b: impl Into<Integer>) -> Self {
+        Self {
+            a: a.into(),
+            b: b.into(),
+            D: PhantomData::default(),
+        }
+    }
+
     #[inline]
-    pub fn discriminant(&self) -> Integer {
-        let (a, b, c) = (&self.0, &self.1, &self.2);
-        Integer::from(b ^ 2) - Integer::from(a * c) * 4
+    pub fn get_c(&self) -> Integer {
+        let mut val = self.b.clone().square();
+        val -= T::Delta_p();
+        val /= 4;
+        val /= &self.a;
+        val
     }
 
     // Check if $$\gcd(a, b, c) = 1$$.
     #[inline]
     pub fn is_primitive(&self, gcd_abc: Option<&mut Integer>) -> bool {
-        let (a, b, c) = (&self.0, &self.1, &self.2);
-        let mut gcd = a.clone().gcd(b);
-        gcd = gcd.clone().gcd(c);
+        let c = self.get_c();
+        let mut gcd = self.a.clone().gcd(&self.b);
+        gcd = gcd.clone().gcd(&c);
         if let Some(out) = gcd_abc {
             *out = gcd.clone();
         }
@@ -25,29 +45,29 @@ impl QuadForm {
     }
 
     #[inline]
-    pub fn to_primitive(&self) -> QuadForm {
-        let (a, b, c) = (&self.0, &self.1, &self.2);
+    pub fn to_primitive(&self) -> Self {
         let mut gcd = Integer::from(1);
         let _ = self.is_primitive(Some(&mut gcd));
-        QuadForm(
-            a.clone() / gcd.clone(),
-            b.clone() / gcd.clone(),
-            c.clone() / gcd.clone(),
-        )
+        let a = self.a.clone() / &gcd;
+        let b = self.b.clone() / &gcd;
+        Self::new(a, b)
     }
 
     #[inline]
     pub fn is_posdef(&self) -> bool {
-        let (a, _b, _c) = (&self.0, &self.1, &self.2);
-        let delta = self.discriminant();
-        &delta < &Integer::ZERO && a > &Integer::ZERO
+        let zero = &Integer::ZERO;
+        let Delta = T::Delta_p();
+        let a = &self.a;
+        return Delta < zero && a > zero;
     }
 
-    // Check if the form is reduced.
-    // Assumptions: positive definite.
+    // Check if the given positive definite form is reduced.
     #[inline]
     pub fn is_reduced(&self) -> bool {
-        let (a, b, c) = (&self.0, &self.1, &self.2);
+        let a = &self.a;
+        let b = &self.b;
+        let _c = self.get_c();
+        let c = &_c;
 
         let mut ret = false;
         if b <= a {
@@ -66,18 +86,15 @@ impl QuadForm {
     }
 
     #[inline]
-    pub fn identity(&self) -> QuadForm {
-        let delta = self.discriminant();
-        let c = Integer::from(1) - delta;
-        let c = c / 4;
-        QuadForm((1).into(), (1).into(), c)
+    pub fn identity(&self) -> Self {
+        Self::new(1, 1)
     }
 
     // [Cohen1993, Algorithm 5.4.2]
     // Given a positive definite quadratic form $$f$$, this algorithm outputs
     // the unique reduced form equivalent to $$f$$.
-    pub fn reduce(&self) -> QuadForm {
-        let (mut a, mut b, mut c) = (self.0.clone(), self.1.clone(), self.2.clone());
+    pub fn reduce(&self) -> Self {
+        let (mut a, mut b, mut c) = (self.a.clone(), self.b.clone(), self.get_c());
 
         loop {
             // Step 1. Initialize.
@@ -94,7 +111,7 @@ impl QuadForm {
                     if &a == &c && &b < &Integer::ZERO {
                         b = -b;
                     }
-                    return QuadForm(a, b, c);
+                    return Self::new(a, b);
                 }
             }
 
@@ -112,9 +129,9 @@ impl QuadForm {
 
     // [Cohen1993, Algorithm 5.4.7] (not NUCOMP)
     // NUCOMP is [Cohen1993, Algorithm 5.4.9]
-    pub fn mul_naive(&self, other: &QuadForm) -> QuadForm {
-        let (mut a1, mut b1, mut c1) = (self.0.clone(), self.1.clone(), self.2.clone());
-        let (mut a2, mut b2, mut c2) = (other.0.clone(), other.1.clone(), other.2.clone());
+    pub fn mul_naive(&self, other: &Self) -> Self {
+        let (mut a1, mut b1, mut c1) = (self.a.clone(), self.b.clone(), self.get_c());
+        let (mut a2, mut b2, mut c2) = (other.a.clone(), other.b.clone(), other.get_c());
 
         // Step 1. Initialize.
         #[allow(unused_assignments)]
@@ -157,32 +174,31 @@ impl QuadForm {
         let a3 = Integer::from(&v1 * &v2);
         let v2r = Integer::from(&v2 * &r);
         let b3 = Integer::from(&v2r * 2) + &b2;
-        let c3 = Integer::from(&c2 * &d1) + Integer::from(&b2 + &v2r) * &r;
-        let c3 = Integer::from(&c3 / &v1);
+        // let c3 = Integer::from(&c2 * &d1) + Integer::from(&b2 + &v2r) * &r;
+        // let c3 = Integer::from(&c3 / &v1);
 
-        let f3 = QuadForm(a3, b3, c3);
+        let f3 = Self::new(a3, b3);
         f3.reduce()
     }
 
     /// TODO: implement NUCOMP
-    pub fn mul(&self, other: &QuadForm) -> QuadForm {
+    pub fn mul(&self, other: &Self) -> Self {
         self.mul_naive(other)
     }
 
     /// TODO: implement NUDUPL
-    pub fn square(&self) -> QuadForm {
+    pub fn square(&self) -> Self {
         self.mul_naive(self)
     }
 
+    /// Just negate B.
     #[inline]
-    pub fn inv(&self) -> QuadForm {
-        let mut f2 = self.clone();
-        f2.1 = -f2.1; // negate B.
-        f2
+    pub fn inv(&self) -> Self {
+        Self::new(self.a.clone(), -self.b.clone())
     }
 
-    pub fn exp(&self, k: &Integer) -> QuadForm {
-        let mut base = self.clone();
+    pub fn exp(&self, k: &Integer) -> Self {
+        let mut base: Self = self.clone();
         let mut res = self.identity();
         let mut expo = k.clone();
 
@@ -200,4 +216,17 @@ impl QuadForm {
         }
         res
     }
+}
+
+pub struct PartialEuclideanResult {}
+
+#[allow(unused)]
+pub fn partial_euclidean(a: &Integer, b: &Integer, L: &Integer) -> PartialEuclideanResult {
+    let v = Integer::from(0);
+    let d = a.clone();
+    let v2 = Integer::from(1);
+    let v3 = b.clone();
+    let z = Integer::from(0);
+
+    todo!()
 }

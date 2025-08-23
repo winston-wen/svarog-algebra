@@ -1,15 +1,12 @@
 use rug::{Integer, rand::RandState};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    cl_elgamal::{ClSettings, derive_c_from_abd},
-    quadform::QuadForm,
-};
+use crate::quadform::{Delta1827, QuadForm, TrDiscriminant};
 
-pub fn keygen(ctx: &ClSettings) -> (Integer, QuadForm) {
+pub fn keygen() -> (Integer, QuadForm<Delta1827>) {
     let mut rng = RandState::new();
-    let x = ctx.order_g.clone().random_below(&mut rng);
-    let gx = ctx.g.exp(&x);
+    let x = Delta1827::order_g().clone().random_below(&mut rng);
+    let gx = Delta1827::generator().exp(&x);
     (x, gx)
 }
 
@@ -18,45 +15,44 @@ pub fn keygen(ctx: &ClSettings) -> (Integer, QuadForm) {
 // where $$m^{-1}$$ is an odd integer such that $$ m^{-1} m \equiv 1 \pmod p$$.
 // The above properties enables us to compute $$f^m$$ in $$O(1)$$ time complexity,
 // bypassing the procedure of quadform composition.
-pub fn exp_f(m: &Integer, ctx: &ClSettings) -> QuadForm {
-    let psquare = &ctx.f.0;
-    let m = m.clone().modulo(ctx.p);
+pub fn exp_f(m: &Integer) -> QuadForm<Delta1827> {
+    let psquare = Delta1827::f().a.clone();
+    let m = m.clone().modulo(Delta1827::p());
     if m.is_zero() {
-        return ctx.id.clone();
+        return Delta1827::identity().clone();
     }
-    let mut inv_m = m.clone().invert(ctx.p).unwrap();
+    let mut inv_m = m.clone().invert(Delta1827::p()).unwrap();
     if inv_m.is_even() {
-        inv_m -= ctx.p;
+        inv_m -= Delta1827::p();
     }
-    let b = Integer::from(&inv_m * ctx.p);
-    let c = derive_c_from_abd(&psquare, &b, ctx.delta_p);
-    QuadForm(psquare.clone(), b, c)
+    let b = inv_m * Delta1827::p();
+    QuadForm::new(psquare, b)
 }
 
-pub fn log_f(fm: &QuadForm, ctx: &ClSettings) -> Integer {
-    if fm == ctx.id {
+pub fn log_f(fm: &QuadForm<Delta1827>) -> Integer {
+    let inv_m = fm.b.clone() / Delta1827::p();
+    let m = inv_m.invert(Delta1827::p());
+    if m.is_ok() {
+        return m.unwrap();
+    } else {
         return Integer::new();
     }
-    let inv_m = Integer::from(&fm.1 / ctx.p);
-    let m = inv_m.invert(ctx.p).unwrap();
-    m
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
 pub struct ClCiphertext {
-    pub gr: QuadForm,
-    pub hrfm: QuadForm,
+    pub gr: QuadForm<Delta1827>,
+    pub hrfm: QuadForm<Delta1827>,
 }
 
 impl ClCiphertext {
     pub fn encrypt(
         m: &Integer,
-        h: &QuadForm, // other's public key
-        ctx: &ClSettings,
+        h: &QuadForm<Delta1827>, // other's public key
     ) -> ClCiphertext {
-        let (r, gr) = keygen(ctx);
+        let (r, gr) = keygen();
         let hr = h.exp(&r);
-        let fm = exp_f(m, ctx);
+        let fm = exp_f(m);
         let hrfm = hr.mul(&fm);
         ClCiphertext { gr, hrfm }
     }
@@ -64,18 +60,16 @@ impl ClCiphertext {
     pub fn decrypt(
         &self,
         x: &Integer, // my secret key
-        ctx: &ClSettings,
     ) -> Integer {
         let h_negr = self.gr.exp(&Integer::from(-x)); // construct $$h^{-r}$$.
         let fm = self.hrfm.mul(&h_negr); // cancel $$h^r$$, homomorphicly.
-        let m = log_f(&fm, ctx);
+        let m = log_f(&fm);
         m
     }
 
     pub fn add_ct(
         &self,
         other: &ClCiphertext, //
-        _ctx: &ClSettings,
     ) -> ClCiphertext {
         ClCiphertext {
             gr: self.gr.mul(&other.gr),
@@ -86,18 +80,16 @@ impl ClCiphertext {
     pub fn add_pt(
         &self,
         other: &Integer, //
-        ctx: &ClSettings,
     ) -> ClCiphertext {
         ClCiphertext {
             gr: self.gr.clone(),
-            hrfm: self.hrfm.mul(&exp_f(other, ctx)),
+            hrfm: self.hrfm.mul(&exp_f(other)),
         }
     }
 
     pub fn mul_pt(
         &self,
         other: &Integer, //
-        _ctx: &ClSettings,
     ) -> ClCiphertext {
         ClCiphertext {
             gr: self.gr.exp(other),

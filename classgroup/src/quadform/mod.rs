@@ -1,10 +1,8 @@
 mod arithmetic;
-// mod multiply_nucomp;
-// pub use multiply_nucomp::*;
-
-use serde::*;
-
 pub use arithmetic::*;
 
-#[cfg(test)]
-mod tests;
+mod tr_discriminant;
+pub use tr_discriminant::*;
+
+mod discriminant_1827bit;
+pub use discriminant_1827bit::*;
