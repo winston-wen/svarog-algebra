@@ -56,6 +56,7 @@ impl TrDiscriminant for Delta599 {
 }
 
 type Q = QuadForm<Delta599>;
+
 #[test]
 fn test_square() {
     let f = Q::new(12, 5).unwrap().square();
@@ -69,4 +70,31 @@ fn test_square() {
     let f = Q::new(13, 5).unwrap().square();
     let g = Q::new(10, -1).unwrap();
     assert_eq!(f, g);
+}
+
+#[test]
+fn test_mul() {
+    let a = Q::new(15, 19).unwrap(); // 15, 19, 16
+    let b = Q::new(26, 31).unwrap(); // 26, 31, 15
+    let c0 = Q::new(6, 1).unwrap(); // 6, 1, 25
+    let c1 = a.mul(&b);
+    let c2 = b.mul(&a);
+    assert_eq!(c1, c0);
+    assert_eq!(c2, c0);
+
+    let a = Q::new(34, -43).unwrap(); // 34, -43, 18
+    let b = Q::new(20, 59).unwrap(); // 20, 59, 51
+    // c0 unchanged.
+    let c1 = a.mul(&b);
+    let c2 = b.mul(&a);
+    assert_eq!(c1, c0);
+    assert_eq!(c2, c0);
+
+    let a = Q::new(787, -1919).unwrap(); // 787 -1919 1170
+    let b = Q::new(2771, -893).unwrap(); // 2771 -893 72
+    let c0 = Q::new(3, 1).unwrap(); // 3, 1, 50
+    let c1 = a.mul(&b);
+    let c2 = b.mul(&a);
+    assert_eq!(c1, c0);
+    assert_eq!(c2, c0);
 }

@@ -190,52 +190,119 @@ impl<T: TrDiscriminant + Clone + 'static> QuadForm<T> {
         f3.reduce()
     }
 
-    /// TODO: implement NUCOMP
+    /// [Cohen1993, Algorithm 5.4.8] NUDUPL
+    /// Reimplement `def _compose(...)` of
+    /// https://github.com/GiacomoPope/ClassGroups/blob/main/classgroup.py
     pub fn mul(&self, other: &Self) -> Self {
-        self.mul_naive(other)
+        let (mut a1, mut b1, mut c1) = (self.a.clone(), self.b.clone(), self.get_c());
+        let (mut a2, mut b2, mut c2) = (other.a.clone(), other.b.clone(), other.get_c());
+
+        // Step 1. Initialize.
+        if a1 < a2 {
+            (a1, b1, c1, a2, b2, c2) = (a2, b2, c2, a1, b1, c1);
+        }
+        let mut s: Integer = (b1.clone() + &b2) / 2;
+        let n = b2.clone() - &s;
+
+        // Step 2. First Euclidean step.
+        let (mut d, u, v) = a2.clone().extended_gcd(a1.clone(), Integer::new());
+        let (mut A, /*mut*/ d1): (Integer, Integer);
+        if s.clone() % &d == 0 {
+            A = -u.clone() * &n;
+            d1 = d.clone();
+            if d != 1 {
+                a1 /= &d1;
+                a2 /= &d1;
+                s /= &d1;
+            }
+        } else {
+            // Step 3. Second Euclidean step.
+            let (_d1, u1, _v1) = s.clone().extended_gcd(d.clone(), Integer::new());
+            d1 = _d1;
+            if d1 > 1 {
+                a1 /= &d1;
+                a2 /= &d1;
+                s /= &d1;
+                d /= &d1;
+            }
+
+            // Step 4. Initialization of reduction.
+            let (c1, c2) = (c1.clone() % &d, c2.clone() % &d);
+            let l = (-u1 * (u.clone() * &c1 + &v * &c2)) % &d;
+            A = -u * (n.clone() / &d) + l * (a1.clone() / &d);
+        }
+
+        // Step 5. Partial reduction.
+        A = A % &a1;
+        let A1 = a1.clone() - &A;
+        if A1 < A {
+            A = -A1;
+        }
+        let obj = Self::partial_euclidean(&a1, &A);
+        let (d, mut v, v2, v3, looped) = (obj.d, obj.v, obj.v2, obj.v3, obj.looped);
+
+        // Step 6. Special case.
+        if !looped {
+            let Q1 = a2.clone() * &v3;
+            let a3 = d.clone() * a2;
+            let b3 = 2 * Q1 + &b2;
+            return Self::new(a3, b3).unwrap().reduce();
+        }
+
+        // Step 7. Final computations
+        let b = (a2 * &d + &n * &v) / &a1;
+        let Q1 = b.clone() * &v3;
+        let Q2 = Q1.clone() + &n;
+        let e = (s.clone() * &d + &c2 * &v) / &a1;
+        let Q3 = e.clone() * v2;
+        let Q4 = Q3.clone() - s;
+        if d1 > 1 {
+            v = d1.clone() * v;
+        }
+        let a3 = d * b + e * v;
+        let b3 = Q1 + Q2 + d1 * (Q3 + Q4);
+        let form = Self::new(a3, b3).unwrap().reduce();
+        return form;
     }
 
     /// [Cohen1993, Algorithm 5.4.8] NUDUPL
+    /// Reimplement `def _square(...)` of
+    /// https://github.com/GiacomoPope/ClassGroups/blob/main/classgroup.py
     pub fn square(&self) -> Self {
         let a = self.a.clone();
         let b = self.b.clone();
         let c = self.get_c();
         let (d1, u, _) = b.clone().extended_gcd(a.clone(), Integer::new());
+
         let /*mut*/ A = a / &d1;
         let /*mut*/ B = b.clone() / &d1;
-        let mut C = (-u * &c).modulo(&A);
+        let mut C = (-c.clone() * &u).modulo(&A);
         let C1 = A.clone() - &C;
         if C1 < C {
             C = -C1;
         }
+
         let obj = Self::partial_euclidean(&A, &C);
         let d = obj.d;
         let (mut v, /*mut*/ v2, v3) = (obj.v, obj.v2, obj.v3);
         if !obj.looped {
             let a2 = d.clone().square();
-            let c2 = v3.clone().square();
-            let b2 = b + (d.clone() + &v3).square() - &a2 - &c2;
-            // let g = (c.clone() + &B * &v3) / &d;
-            // let c2 = c2 + &g * &d1;
-            let f = Self::new(a2, b2).unwrap().reduce();
-            return f;
-        } else {
-            let e = (c.clone() * &v + &B * &d) / &A;
-            let g = (e.clone() * &v2 - &B) / &v;
-            let mut b2 = e.clone() * &v2 + &v * &g;
-            if d1 > 1 {
-                b2 = b2 * &d1;
-                v = v * &d1;
-                // v2 = v2 * &d1;
-            }
-            let a2 = d.clone().square();
-            let c2 = v3.clone().square();
-            let b2 = b2 + (d.clone() + &v3).square() - &a2 - &c2;
-            let a2 = a2 + &e * &v;
-            // let c2 = c2 + &g * &v2;
+            let b2 = b + 2 * d * v3;
             let f = Self::new(a2, b2).unwrap().reduce();
             return f;
         }
+
+        let e = (c * &v + &B * &d) / &A;
+        let g = (e.clone() * &v2 - &B) / &v;
+        let mut b2 = e.clone() * &v2 + &v * &g;
+        if d1 > 1 {
+            b2 = b2 * &d1;
+            v = v * &d1;
+        }
+        let a2 = d.clone().square() + &e * &v;
+        let b2 = b2 + 2 * d * v3;
+        let f = Self::new(a2, b2).unwrap().reduce();
+        return f;
     }
 
     /// Just negate B.
@@ -265,39 +332,29 @@ impl<T: TrDiscriminant + Clone + 'static> QuadForm<T> {
     }
 
     #[allow(unused)]
+    /// Reimplement `def part_eucl(...)` of
+    /// https://github.com/GiacomoPope/ClassGroups/blob/main/classgroup_helper.py
     pub fn partial_euclidean(a: &Integer, b: &Integer) -> PartialEuclideanResult {
-        let mut d = a.clone();
         let mut v = Integer::from(0);
         let mut v2 = Integer::from(1);
         let mut v3 = b.clone();
+        let mut d = a.clone();
         let mut loop_is_odd = false;
         let mut looped = false;
 
-        loop {
-            let v3_abs = v3.clone().abs();
-            if &v3_abs <= T::L() {
-                if loop_is_odd {
-                    v2 = -v2;
-                    v3 = -v3;
-                }
-                let res = PartialEuclideanResult {
-                    d: d.clone(),
-                    v: v.clone(),
-                    v2: v2.clone(),
-                    v3: v3.clone(),
-                    looped,
-                };
-                return res;
-            }
-            let (q, t3) = d.clone().div_rem_euc(v3.clone());
+        while &v3.clone().abs() > T::L() {
+            let (mut q, t3) = d.clone().div_rem_euc(v3.clone());
             let t2 = Integer::from(&v - &q * &v2);
-            v = v2.clone();
-            d = v3.clone();
-            v2 = t2;
-            v3 = t3;
+            (v, d) = (v2, v3);
+            (v2, v3) = (t2, t3);
             loop_is_odd = !loop_is_odd;
             looped = true;
         }
+        if loop_is_odd {
+            (v2, v3) = (-v2, -v3);
+        }
+
+        return PartialEuclideanResult { d, v, v2, v3, looped };
     }
 }
 
