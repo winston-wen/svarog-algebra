@@ -6,3 +6,6 @@ pub use tr_discriminant::*;
 
 mod discriminant_1827bit;
 pub use discriminant_1827bit::*;
+
+#[cfg(test)]
+mod tests;

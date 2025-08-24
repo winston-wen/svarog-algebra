@@ -1,26 +1,40 @@
+use core::fmt;
 use std::marker::PhantomData;
 
 use super::*;
+use anyhow::{ ensure, Ok };
 use rug::Integer;
-use serde::{Deserialize, Serialize};
+use serde::{ Deserialize, Serialize };
 
-#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
-pub struct QuadForm<Delta>
-where
-    Delta: TrDiscriminant + Clone,
-{
+#[derive(Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
+pub struct QuadForm<Delta> where Delta: TrDiscriminant + Clone {
     pub a: Integer,
     pub b: Integer,
     D: PhantomData<Delta>,
 }
 
-impl<T: TrDiscriminant + Clone> QuadForm<T> {
-    pub fn new(a: impl Into<Integer>, b: impl Into<Integer>) -> Self {
-        Self {
-            a: a.into(),
-            b: b.into(),
+impl<Delta> fmt::Debug for QuadForm<Delta> where Delta: TrDiscriminant + Clone + 'static {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let c = self.get_c();
+        write!(f, "QuadForm({}, {}, {})", &self.a, &self.b, c)
+    }
+}
+
+impl<T: TrDiscriminant + Clone + 'static> QuadForm<T> {
+    pub fn new(a: impl Into<Integer>, b: impl Into<Integer>) -> anyhow::Result<Self> {
+        let a: Integer = a.into();
+        let b: Integer = b.into();
+        let lhs = b.clone().square() - T::Delta_p();
+        let rhs = a.clone() * 4;
+        let rem = lhs.modulo(&rhs);
+        ensure!(rem == 0, "QuadForm::new(...) math broken");
+
+        let res = Self {
+            a,
+            b,
             D: PhantomData::default(),
-        }
+        };
+        Ok(res)
     }
 
     #[inline]
@@ -50,7 +64,7 @@ impl<T: TrDiscriminant + Clone> QuadForm<T> {
         let _ = self.is_primitive(Some(&mut gcd));
         let a = self.a.clone() / &gcd;
         let b = self.b.clone() / &gcd;
-        Self::new(a, b)
+        Self::new(a, b).unwrap()
     }
 
     #[inline]
@@ -85,11 +99,6 @@ impl<T: TrDiscriminant + Clone> QuadForm<T> {
         ret
     }
 
-    #[inline]
-    pub fn identity(&self) -> Self {
-        Self::new(1, 1)
-    }
-
     // [Cohen1993, Algorithm 5.4.2]
     // Given a positive definite quadratic form $$f$$, this algorithm outputs
     // the unique reduced form equivalent to $$f$$.
@@ -111,7 +120,7 @@ impl<T: TrDiscriminant + Clone> QuadForm<T> {
                     if &a == &c && &b < &Integer::ZERO {
                         b = -b;
                     }
-                    return Self::new(a, b);
+                    return Self::new(a, b).unwrap();
                 }
             }
 
@@ -177,7 +186,7 @@ impl<T: TrDiscriminant + Clone> QuadForm<T> {
         // let c3 = Integer::from(&c2 * &d1) + Integer::from(&b2 + &v2r) * &r;
         // let c3 = Integer::from(&c3 / &v1);
 
-        let f3 = Self::new(a3, b3);
+        let f3 = Self::new(a3, b3).unwrap();
         f3.reduce()
     }
 
@@ -186,20 +195,57 @@ impl<T: TrDiscriminant + Clone> QuadForm<T> {
         self.mul_naive(other)
     }
 
-    /// TODO: implement NUDUPL
     pub fn square(&self) -> Self {
-        self.mul_naive(self)
+        let a = self.a.clone();
+        let b = self.b.clone();
+        let c = self.get_c();
+        let (d1, u, _) = b.clone().extended_gcd(a.clone(), Integer::new());
+        let /*mut*/ A = a / &d1;
+        let /*mut*/ B = b.clone() / &d1;
+        let mut C = (-u * &c).modulo(&A);
+        let C1 = A.clone() - &C;
+        if C1 < C {
+            C = -C1;
+        }
+        let obj = Self::partial_euclidean(&A, &C);
+        let d = obj.d;
+        let (mut v, /*mut*/ v2, v3) = (obj.v, obj.v2, obj.v3);
+        if !obj.looped {
+            let a2 = d.clone().square();
+            let c2 = v3.clone().square();
+            let b2 = b + (d.clone() + &v3).square() - &a2 - &c2;
+            // let g = (c.clone() + &B * &v3) / &d;
+            // let c2 = c2 + &g * &d1;
+            let f = Self::new(a2, b2).unwrap().reduce();
+            return f;
+        } else {
+            let e = (c.clone() * &v + &B * &d) / &A;
+            let g = (e.clone() * &v2 - &B) / &v;
+            let mut b2 = e.clone() * &v2 + &v * &g;
+            if d1 > 1 {
+                b2 = b2 * &d1;
+                v = v * &d1;
+                // v2 = v2 * &d1;
+            }
+            let a2 = d.clone().square();
+            let c2 = v3.clone().square();
+            let b2 = b2 + (d.clone() + &v3).square() - &a2 - &c2;
+            let a2 = a2 + &e * &v;
+            // let c2 = c2 + &g * &v2;
+            let f = Self::new(a2, b2).unwrap().reduce();
+            return f;
+        }
     }
 
     /// Just negate B.
     #[inline]
     pub fn inv(&self) -> Self {
-        Self::new(self.a.clone(), -self.b.clone())
+        Self::new(self.a.clone(), -self.b.clone()).unwrap()
     }
 
     pub fn exp(&self, k: &Integer) -> Self {
         let mut base: Self = self.clone();
-        let mut res = self.identity();
+        let mut res = T::identity().clone();
         let mut expo = k.clone();
 
         if expo.is_negative() {
@@ -216,17 +262,49 @@ impl<T: TrDiscriminant + Clone> QuadForm<T> {
         }
         res
     }
+
+    #[allow(unused)]
+    pub fn partial_euclidean(a: &Integer, b: &Integer) -> PartialEuclideanResult {
+        let mut d = a.clone();
+        let mut v = Integer::from(0);
+        let mut v2 = Integer::from(1);
+        let mut v3 = b.clone();
+        let mut loop_is_odd = false;
+        let mut looped = false;
+
+        loop {
+            let v3_abs = v3.clone().abs();
+            if &v3_abs <= T::L() {
+                if loop_is_odd {
+                    v2 = -v2;
+                    v3 = -v3;
+                }
+                let res = PartialEuclideanResult {
+                    d: d.clone(),
+                    v: v.clone(),
+                    v2: v2.clone(),
+                    v3: v3.clone(),
+                    looped,
+                };
+                return res;
+            }
+            let (q, t3) = d.clone().div_rem_euc(v3.clone());
+            let t2 = Integer::from(&v - &q * &v2);
+            v = v2.clone();
+            d = v3.clone();
+            v2 = t2;
+            v3 = t3;
+            loop_is_odd = !loop_is_odd;
+            looped = true;
+        }
+    }
 }
 
-pub struct PartialEuclideanResult {}
-
-#[allow(unused)]
-pub fn partial_euclidean(a: &Integer, b: &Integer, L: &Integer) -> PartialEuclideanResult {
-    let v = Integer::from(0);
-    let d = a.clone();
-    let v2 = Integer::from(1);
-    let v3 = b.clone();
-    let z = Integer::from(0);
-
-    todo!()
+#[derive(Serialize, Deserialize, Clone, Default)]
+pub struct PartialEuclideanResult {
+    pub d: Integer,
+    pub v: Integer,
+    pub v2: Integer,
+    pub v3: Integer,
+    pub looped: bool,
 }
