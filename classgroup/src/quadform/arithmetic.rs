@@ -195,6 +195,7 @@ impl<T: TrDiscriminant + Clone + 'static> QuadForm<T> {
         self.mul_naive(other)
     }
 
+    /// [Cohen1993, Algorithm 5.4.8] NUDUPL
     pub fn square(&self) -> Self {
         let a = self.a.clone();
         let b = self.b.clone();

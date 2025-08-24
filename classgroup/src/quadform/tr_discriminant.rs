@@ -1,5 +1,3 @@
-use std::sync::LazyLock;
-
 use rug::Integer;
 
 use crate::quadform::QuadForm;
