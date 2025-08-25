@@ -1,4 +1,4 @@
-use rug::Integer;
+use rug::{Complete, Integer};
 
 use crate::{
     cl_elgamal::*,
@@ -7,7 +7,9 @@ use crate::{
 
 #[test]
 fn test_f_exp() {
-    let m = Integer::from(114514);
+    use rug::rand::RandState;
+    let mut rng = RandState::new();
+    let m = Integer::random_bits(256, &mut rng).complete();
     let g1 = Delta1827bit::f().exp(&m);
     let g2 = exp_f(&m);
     assert_eq!(g1, g2);
@@ -15,7 +17,9 @@ fn test_f_exp() {
 
 #[test]
 fn test_encdec() {
-    let m = Integer::from(-114514);
+    use rug::rand::RandState;
+    let mut rng = RandState::new();
+    let m = Integer::random_bits(256, &mut rng).complete();
 
     let (x, h) = keygen();
     let ct = ClCiphertext::encrypt(&m, &h);
@@ -27,8 +31,10 @@ fn test_encdec() {
 #[test]
 /// test linearly homomorphic encryption & decrytion.
 fn test_lhe() {
-    let m1 = Integer::from(-114514);
-    let m2 = Integer::from(-1919);
+    use rug::rand::RandState;
+    let mut rng = RandState::new();
+    let m1 = Integer::random_bits(256, &mut rng).complete();
+    let m2 = Integer::random_bits(256, &mut rng).complete();
 
     let (x, h) = keygen();
 
@@ -58,20 +64,23 @@ fn test_lhe() {
 
 #[test]
 fn test_identity() {
-    let f114 = exp_f(&Integer::from(114));
-    let g114 = Delta1827bit::generator().exp(&Integer::from(114));
-    assert_eq!(f114, f114.mul(Delta1827bit::identity()));
-    assert_eq!(g114, g114.mul(Delta1827bit::identity()));
+    use rug::rand::RandState;
+    let mut rng = RandState::new();
+    let e = Integer::from(Integer::random_bits(256, &mut rng));
+    let f = exp_f(&e);
+    let g = Delta1827bit::generator().exp(&e);
+    assert_eq!(f, f.mul(Delta1827bit::identity()));
+    assert_eq!(g, g.mul(Delta1827bit::identity()));
 }
 
 #[test]
 /// test ecdsa MtA
 fn test_mta() {
-    // use rug::rand::RandState;
-    // let mut rng = RandState::new();
-    let vji = Integer::from(Delta1827bit::p() - 114);
-    let ki = Integer::from(Delta1827bit::p() - 514);
-    let wj = Integer::from(Delta1827bit::p() - 1919);
+    use rug::rand::RandState;
+    let mut rng = RandState::new();
+    let vji = Integer::from(Integer::random_bits(256, &mut rng));
+    let ki = Integer::from(Integer::random_bits(256, &mut rng));
+    let wj = Integer::from(Integer::random_bits(256, &mut rng));
 
     let (sk, pk) = keygen();
     let ki_ct = ClCiphertext::encrypt(&ki, &pk);

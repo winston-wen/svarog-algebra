@@ -125,7 +125,7 @@ impl<T: TrDiscriminant + Clone + 'static> QuadForm<T> {
             }
 
             // Step 2. Euclidean step.
-            let double_a = Integer::from(&a * &Integer::from(2));
+            let double_a: Integer = a.clone() * 2;
             let (mut q, mut r) = b.clone().div_rem_euc(double_a.clone());
             if &r > &a {
                 r -= &double_a;
@@ -321,7 +321,7 @@ impl<T: TrDiscriminant + Clone + 'static> QuadForm<T> {
             expo = -expo;
         }
         while expo.is_positive() {
-            if expo.get_bit(0) {
+            if expo.is_odd() {
                 // if the least bit is 1.
                 res = base.mul(&res);
             }
