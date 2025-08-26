@@ -49,12 +49,12 @@ impl ClCiphertext {
     pub fn encrypt(
         m: &Integer,
         h: &QuadForm<Delta1827bit>, // other's public key
-    ) -> ClCiphertext {
+    ) -> (ClCiphertext, Integer) {
         let (r, gr) = keygen();
         let hr = h.exp(&r);
         let fm = exp_f(m);
         let hrfm = hr.mul(&fm);
-        ClCiphertext { gr, hrfm }
+        (ClCiphertext { gr, hrfm }, r)
     }
 
     pub fn decrypt(
