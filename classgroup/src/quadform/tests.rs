@@ -1,9 +1,9 @@
 use std::sync::LazyLock;
 
 use rug::Integer;
-use serde::{ Deserialize, Serialize };
+use serde::{Deserialize, Serialize};
 
-use crate::quadform::{ QuadForm, TrDiscriminant };
+use crate::quadform::{QuadForm, TrDiscriminant};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
 struct Delta599 {}
@@ -26,16 +26,25 @@ impl TrDiscriminant for Delta599 {
         todo!()
     }
 
-    fn identity() -> &'static QuadForm<Self> where Self: Sized + Clone {
+    fn identity() -> &'static QuadForm<Self>
+    where
+        Self: Sized + Clone,
+    {
         static ID: LazyLock<QuadForm<Delta599>> = LazyLock::new(|| QuadForm::new(1, 1).unwrap());
         return &ID;
     }
 
-    fn f() -> &'static super::QuadForm<Self> where Self: Sized + Clone {
+    fn f() -> &'static super::QuadForm<Self>
+    where
+        Self: Sized + Clone,
+    {
         todo!()
     }
 
-    fn generator() -> &'static super::QuadForm<Self> where Self: Sized + Clone {
+    fn generator() -> &'static super::QuadForm<Self>
+    where
+        Self: Sized + Clone,
+    {
         todo!()
     }
 
@@ -50,7 +59,7 @@ impl TrDiscriminant for Delta599 {
         return &L;
     }
 
-    fn order_g() -> &'static Integer {
+    fn order_g_approx() -> &'static Integer {
         todo!()
     }
 }

@@ -2,18 +2,24 @@ use core::fmt;
 use std::marker::PhantomData;
 
 use super::*;
-use anyhow::{ ensure, Ok };
+use anyhow::{Context, Ok, ensure};
 use rug::Integer;
-use serde::{ Deserialize, Serialize };
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
-pub struct QuadForm<Delta> where Delta: TrDiscriminant + Clone {
+pub struct QuadForm<Delta>
+where
+    Delta: TrDiscriminant + Clone,
+{
     pub a: Integer,
     pub b: Integer,
     D: PhantomData<Delta>,
 }
 
-impl<Delta> fmt::Debug for QuadForm<Delta> where Delta: TrDiscriminant + Clone + 'static {
+impl<Delta> fmt::Debug for QuadForm<Delta>
+where
+    Delta: TrDiscriminant + Clone + 'static,
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let c = self.get_c();
         write!(f, "QuadForm({}, {}, {})", &self.a, &self.b, c)
@@ -354,7 +360,25 @@ impl<T: TrDiscriminant + Clone + 'static> QuadForm<T> {
             (v2, v3) = (-v2, -v3);
         }
 
-        return PartialEuclideanResult { d, v, v2, v3, looped };
+        return PartialEuclideanResult {
+            d,
+            v,
+            v2,
+            v3,
+            looped,
+        };
+    }
+
+    pub fn to_bytes(&self) -> Vec<u8> {
+        serde_pickle::to_vec(self, Default::default()).unwrap()
+    }
+
+    pub fn from_bytes(buf: &[u8]) -> anyhow::Result<Self> {
+        let obj: Self = serde_pickle::from_slice(buf, Default::default())
+            .with_context(|| "Failed to deserialize a QuadForm")?;
+        let obj = Self::new(obj.a, obj.b).with_context(|| "Deserialized an invalid QuadForm")?;
+
+        Ok(obj)
     }
 }
 

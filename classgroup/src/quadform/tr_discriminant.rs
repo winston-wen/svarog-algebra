@@ -11,8 +11,12 @@ pub trait TrDiscriminant {
     where
         Self: Sized + Clone;
 
-    fn f() -> &'static QuadForm<Self> where Self: Sized + Clone;
-    fn generator() -> &'static QuadForm<Self> where Self: Sized + Clone;
+    fn f() -> &'static QuadForm<Self>
+    where
+        Self: Sized + Clone;
+    fn generator() -> &'static QuadForm<Self>
+    where
+        Self: Sized + Clone;
     fn L() -> &'static Integer;
-    fn order_g() -> &'static Integer;
+    fn order_g_approx() -> &'static Integer;
 }

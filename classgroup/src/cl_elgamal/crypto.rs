@@ -5,7 +5,9 @@ use crate::quadform::{Delta1827bit, QuadForm, TrDiscriminant};
 
 pub fn keygen() -> (Integer, QuadForm<Delta1827bit>) {
     let mut rng = RandState::new();
-    let x = Delta1827bit::order_g().clone().random_below(&mut rng);
+    let x = Delta1827bit::order_g_approx()
+        .clone()
+        .random_below(&mut rng);
     let gx = Delta1827bit::generator().exp(&x);
     (x, gx)
 }

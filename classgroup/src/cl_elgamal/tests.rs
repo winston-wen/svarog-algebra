@@ -22,7 +22,7 @@ fn test_encdec() {
     let m = Integer::random_bits(256, &mut rng).complete();
 
     let (x, h) = keygen();
-    let ct = ClCiphertext::encrypt(&m, &h);
+    let (ct, _) = ClCiphertext::encrypt(&m, &h);
     let m = m.modulo(Delta1827bit::p());
     let m2 = ct.decrypt(&x);
     assert_eq!(m, m2);
@@ -39,8 +39,8 @@ fn test_lhe() {
     let (x, h) = keygen();
 
     '_test_add_ct: {
-        let ct1 = ClCiphertext::encrypt(&m1, &h);
-        let ct2 = ClCiphertext::encrypt(&m2, &h);
+        let (ct1, _) = ClCiphertext::encrypt(&m1, &h);
+        let (ct2, _) = ClCiphertext::encrypt(&m2, &h);
         let ct = ct1.add_ct(&ct2);
         let m_gt = Integer::from(&m1 + &m2).modulo(Delta1827bit::p());
         let m_eval = ct.decrypt(&x);
@@ -48,14 +48,16 @@ fn test_lhe() {
     }
 
     '_test_add_pt: {
-        let ct = ClCiphertext::encrypt(&m1, &h).add_pt(&m2);
+        let (ct, _) = ClCiphertext::encrypt(&m1, &h);
+        let ct = ct.add_pt(&m2);
         let m_gt = Integer::from(&m1 + &m2).modulo(Delta1827bit::p());
         let m_eval = ct.decrypt(&x);
         assert_eq!(m_gt, m_eval);
     }
 
     '_test_mul_pt: {
-        let ct = ClCiphertext::encrypt(&m1, &h).mul_pt(&m2);
+        let (ct, _) = ClCiphertext::encrypt(&m1, &h);
+        let ct = ct.mul_pt(&m2);
         let m_gt = Integer::from(&m1 * &m2).modulo(Delta1827bit::p());
         let m_eval = ct.decrypt(&x);
         assert_eq!(m_gt, m_eval)
@@ -83,7 +85,7 @@ fn test_mta() {
     let wj = Integer::from(Integer::random_bits(256, &mut rng));
 
     let (sk, pk) = keygen();
-    let ki_ct = ClCiphertext::encrypt(&ki, &pk);
+    let (ki_ct, _) = ClCiphertext::encrypt(&ki, &pk);
     // [uji] + vji == [kj] * wi
     let neg_vji = Integer::from(-&vji);
     let uji_ct = ki_ct.mul_pt(&wj).add_pt(&neg_vji);
@@ -115,6 +117,6 @@ fn bench_exp() {
 
 #[test]
 fn show_log2_of_order() {
-    let ord_len = Delta1827bit::order_g().significant_bits();
+    let ord_len = Delta1827bit::order_g_approx().significant_bits();
     println!("{ord_len}"); // 1083
 }
