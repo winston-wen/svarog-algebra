@@ -1,10 +1,10 @@
-use rug::{Integer, rand::RandState};
+use rug::Integer;
 use serde::{Deserialize, Serialize};
 
 use crate::quadform::{Delta1827bit, QuadForm, TrDiscriminant};
 
 pub fn keygen() -> (Integer, QuadForm<Delta1827bit>) {
-    let mut rng = RandState::new();
+    let mut rng = crate::rug_seeded_rng();
     let x = Delta1827bit::order_g_approx()
         .clone()
         .random_below(&mut rng);

@@ -6,6 +6,14 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.99"
 once_cell = "1.21.3"
-rug = { path = "../rug-1.27.0", features = ["serde"] }
+rand = "*"
+rug = { version = "1.28.0", features = ["serde"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde-pickle = "1.2.0"
+
+# The cargo will try to use THIS dependency
+# EVERYWHERE in the dependency tree, if possible.
+# You can run `cargo tree -f "{p} {f}"` to check this out.
+[dependencies.gmp-mpfr-sys]
+version = "*"
+features = ["force-cross"]

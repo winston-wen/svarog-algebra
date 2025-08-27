@@ -3,13 +3,14 @@ use rug::{Complete, Integer};
 use crate::{
     cl_elgamal::*,
     quadform::{Delta1827bit, TrDiscriminant},
+    rug_seeded_rng,
 };
 
 #[test]
 fn test_f_exp() {
-    use rug::rand::RandState;
-    let mut rng = RandState::new();
+    let mut rng = rug_seeded_rng();
     let m = Integer::random_bits(256, &mut rng).complete();
+    println!("{}", &m);
     let g1 = Delta1827bit::f().exp(&m);
     let g2 = exp_f(&m);
     assert_eq!(g1, g2);
@@ -17,8 +18,7 @@ fn test_f_exp() {
 
 #[test]
 fn test_encdec() {
-    use rug::rand::RandState;
-    let mut rng = RandState::new();
+    let mut rng = rug_seeded_rng();
     let m = Integer::random_bits(256, &mut rng).complete();
 
     let (x, h) = keygen();
@@ -31,8 +31,7 @@ fn test_encdec() {
 #[test]
 /// test linearly homomorphic encryption & decrytion.
 fn test_lhe() {
-    use rug::rand::RandState;
-    let mut rng = RandState::new();
+    let mut rng = rug_seeded_rng();
     let m1 = Integer::random_bits(256, &mut rng).complete();
     let m2 = Integer::random_bits(256, &mut rng).complete();
 
@@ -66,8 +65,7 @@ fn test_lhe() {
 
 #[test]
 fn test_identity() {
-    use rug::rand::RandState;
-    let mut rng = RandState::new();
+    let mut rng = rug_seeded_rng();
     let e = Integer::from(Integer::random_bits(256, &mut rng));
     let f = exp_f(&e);
     let g = Delta1827bit::generator().exp(&e);
@@ -78,8 +76,7 @@ fn test_identity() {
 #[test]
 /// test ecdsa MtA
 fn test_mta() {
-    use rug::rand::RandState;
-    let mut rng = RandState::new();
+    let mut rng = rug_seeded_rng();
     let vji = Integer::from(Integer::random_bits(256, &mut rng));
     let ki = Integer::from(Integer::random_bits(256, &mut rng));
     let wj = Integer::from(Integer::random_bits(256, &mut rng));
@@ -99,12 +96,11 @@ fn test_mta() {
 #[test]
 fn bench_exp() {
     use rug::Integer;
-    use rug::rand::RandState;
 
     let mut t_ms: u128 = 0;
     let n: u128 = 100;
     for _ in 0..n {
-        let mut rand = RandState::new();
+        let mut rand = rug_seeded_rng();
         let e = Integer::from(Integer::random_bits(256, &mut rand));
         let timer = std::time::Instant::now();
         let _ = Delta1827bit::generator().exp(&e);
