@@ -1,4 +1,4 @@
-use rug::{Integer};
+use rug::Integer;
 
 /// Chinese Remainder Theorem
 ///

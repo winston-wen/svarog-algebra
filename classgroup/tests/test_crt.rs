@@ -1,6 +1,6 @@
 use classgroup::{generator_utils::crt, rug_seeded_rng};
 use rand::RngCore;
-use rug::{ops::Pow, Integer};
+use rug::{Integer, ops::Pow};
 
 #[test]
 fn test_crt() {
@@ -24,7 +24,7 @@ fn test_crt() {
             let ei = get_e();
             let wi = pi.clone().pow(ei);
             let xi = gt.clone() % &wi;
-            
+
             w *= &wi;
             xs.push(xi);
             ws.push(wi);

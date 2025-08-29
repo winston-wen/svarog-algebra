@@ -1,5 +1,5 @@
-use anyhow::{ bail, ensure };
-use rug::{ Integer };
+use anyhow::{bail, ensure};
+use rug::Integer;
 
 use super::crt;
 
@@ -57,7 +57,10 @@ pub fn sqrt_modp(a: impl Into<Integer>, p: impl Into<Integer>) -> anyhow::Result
     if a == 0 {
         return Ok(a);
     }
-    ensure!(a.legendre(&p) == 1, "algorithm requires `a` be a quadratic residue.");
+    ensure!(
+        a.legendre(&p) == 1,
+        "algorithm requires `a` be a quadratic residue."
+    );
 
     let mut s: Integer;
     if p == 2 {
@@ -112,10 +115,7 @@ fn tonelli_shanks(a: impl Into<Integer>, p: impl Into<Integer>) -> Integer {
     };
 
     let mut c = z.clone().pow_mod(&q, &p).unwrap();
-    let mut r = a
-        .clone()
-        .pow_mod(&((q.clone() + 1) >> 1), &p)
-        .unwrap();
+    let mut r = a.clone().pow_mod(&((q.clone() + 1) >> 1), &p).unwrap();
     let mut t = a.clone().pow_mod(&q, &p).unwrap();
 
     let mut m = s as i32;
