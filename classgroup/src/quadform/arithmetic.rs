@@ -1,55 +1,78 @@
 use core::fmt;
-use std::marker::PhantomData;
 
-use super::*;
 use anyhow::{Context, Ok, ensure};
 use rug::Integer;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
-pub struct QuadForm<Delta>
-where
-    Delta: TrDiscriminant + Clone,
-{
+pub struct QuadForm {
     pub a: Integer,
     pub b: Integer,
-    D: PhantomData<Delta>,
+    pub Delta: Integer,
+    pub L: Integer,
 }
 
-impl<Delta> fmt::Debug for QuadForm<Delta>
-where
-    Delta: TrDiscriminant + Clone + 'static,
-{
+impl fmt::Debug for QuadForm {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let c = self.get_c();
         write!(f, "QuadForm({}, {}, {})", &self.a, &self.b, c)
     }
 }
 
-impl<T: TrDiscriminant + Clone + 'static> QuadForm<T> {
-    pub fn new(a: impl Into<Integer>, b: impl Into<Integer>) -> anyhow::Result<Self> {
+impl QuadForm {
+    pub fn new(
+        a: impl Into<Integer>,
+        b: impl Into<Integer>,
+        Delta: impl Into<Integer>,
+    ) -> anyhow::Result<Self> {
         let a: Integer = a.into();
         let b: Integer = b.into();
-        let lhs = b.clone().square() - T::Delta_p();
-        let rhs = a.clone() * 4;
-        let rem = lhs.modulo(&rhs);
-        ensure!(rem == 0, "QuadForm::new(...) math broken");
+        let Delta: Integer = Delta.into();
+        let is_posdef = Delta.is_negative() && a.is_positive();
+        ensure!(
+            is_posdef,
+            "QuadForm::new(...) only accepts a posdef binary quadform."
+        );
 
-        let res = Self {
-            a,
-            b,
-            D: PhantomData::default(),
-        };
+        let lhs = b.clone().square() - &Delta;
+        let rhs = 4 * a.clone();
+        let rem = lhs.modulo(&rhs);
+        ensure!(rem == 0, "QuadForm::new(...) failed to find integer c");
+
+        let L = (Delta.clone().abs() / Integer::from(4)).sqrt().sqrt();
+
+        let res = Self { a, b, Delta, L };
+        Ok(res)
+    }
+
+    pub fn new_alike(&self, a: impl Into<Integer>, b: impl Into<Integer>) -> anyhow::Result<Self> {
+        let a = a.into();
+        let b = b.into();
+        let Delta = self.Delta.clone();
+        let is_posdef = Delta.is_negative() && a.is_positive();
+        ensure!(
+            is_posdef,
+            "QuadForm::new_alike(...) only accepts a posdef binary quadform."
+        );
+
+        let lhs = b.clone().square() - &Delta;
+        let rhs = 4 * a.clone();
+        let rem = lhs.modulo(&rhs);
+        ensure!(
+            rem == 0,
+            "QuadForm::new_alike(...) failed to find integer c"
+        );
+
+        // Here we trust that `self.L` is correct.
+        let L = self.L.clone();
+
+        let res = Self { a, b, Delta, L };
         Ok(res)
     }
 
     #[inline]
     pub fn get_c(&self) -> Integer {
-        let mut val = self.b.clone().square();
-        val -= T::Delta_p();
-        val /= 4;
-        val /= &self.a;
-        val
+        return (self.b.clone().square() - &self.Delta) / 4 / &self.a;
     }
 
     // Check if $$\gcd(a, b, c) = 1$$.
@@ -70,15 +93,12 @@ impl<T: TrDiscriminant + Clone + 'static> QuadForm<T> {
         let _ = self.is_primitive(Some(&mut gcd));
         let a = self.a.clone() / &gcd;
         let b = self.b.clone() / &gcd;
-        Self::new(a, b).unwrap()
+        Self::new(a, b, &self.Delta).unwrap()
     }
 
     #[inline]
     pub fn is_posdef(&self) -> bool {
-        let zero = &Integer::ZERO;
-        let Delta = T::Delta_p();
-        let a = &self.a;
-        return Delta < zero && a > zero;
+        return self.Delta.is_negative() && self.a.is_positive();
     }
 
     // Check if the given positive definite form is reduced.
@@ -105,6 +125,17 @@ impl<T: TrDiscriminant + Clone + 'static> QuadForm<T> {
         ret
     }
 
+    #[inline]
+    pub fn new_identity(&self) -> Self {
+        // Here we trust that `self.Delta` and `self.L` are correct.
+        return Self {
+            a: 1.into(),
+            b: 1.into(),
+            Delta: self.Delta.clone(),
+            L: self.L.clone(),
+        };
+    }
+
     // [Cohen1993, Algorithm 5.4.2]
     // Given a positive definite quadratic form $$f$$, this algorithm outputs
     // the unique reduced form equivalent to $$f$$.
@@ -126,7 +157,7 @@ impl<T: TrDiscriminant + Clone + 'static> QuadForm<T> {
                     if &a == &c && &b < &Integer::ZERO {
                         b = -b;
                     }
-                    return Self::new(a, b).unwrap();
+                    return Self::new(a, b, &self.Delta).unwrap();
                 }
             }
 
@@ -192,7 +223,7 @@ impl<T: TrDiscriminant + Clone + 'static> QuadForm<T> {
         // let c3 = Integer::from(&c2 * &d1) + Integer::from(&b2 + &v2r) * &r;
         // let c3 = Integer::from(&c3 / &v1);
 
-        let f3 = Self::new(a3, b3).unwrap();
+        let f3 = self.new_alike(a3, b3).unwrap();
         f3.reduce()
     }
 
@@ -200,6 +231,10 @@ impl<T: TrDiscriminant + Clone + 'static> QuadForm<T> {
     /// Reimplement `def _compose(...)` of
     /// https://github.com/GiacomoPope/ClassGroups/blob/main/classgroup.py
     pub fn mul(&self, other: &Self) -> Self {
+        assert_eq!(
+            self.Delta, other.Delta,
+            "QuadForm::mul(...) refuses to multiply quadforms with different discriminant."
+        );
         let (mut a1, mut b1, mut c1) = (self.a.clone(), self.b.clone(), self.get_c());
         let (mut a2, mut b2, mut c2) = (other.a.clone(), other.b.clone(), other.get_c());
 
@@ -244,7 +279,7 @@ impl<T: TrDiscriminant + Clone + 'static> QuadForm<T> {
         if A1 < A {
             A = -A1;
         }
-        let obj = Self::partial_euclidean(&a1, &A);
+        let obj = Self::partial_euclidean(&a1, &A, &self.L);
         let (d, mut v, v2, v3, looped) = (obj.d, obj.v, obj.v2, obj.v3, obj.looped);
 
         // Step 6. Special case.
@@ -252,7 +287,7 @@ impl<T: TrDiscriminant + Clone + 'static> QuadForm<T> {
             let Q1 = a2.clone() * &v3;
             let a3 = d.clone() * a2;
             let b3 = 2 * Q1 + &b2;
-            return Self::new(a3, b3).unwrap().reduce();
+            return self.new_alike(a3, b3).unwrap().reduce();
         }
 
         // Step 7. Final computations
@@ -267,7 +302,7 @@ impl<T: TrDiscriminant + Clone + 'static> QuadForm<T> {
         }
         let a3 = d * b + e * v;
         let b3 = Q1 + Q2 + d1 * (Q3 + Q4);
-        let form = Self::new(a3, b3).unwrap().reduce();
+        let form = self.new_alike(a3, b3).unwrap().reduce();
         return form;
     }
 
@@ -288,13 +323,13 @@ impl<T: TrDiscriminant + Clone + 'static> QuadForm<T> {
             C = -C1;
         }
 
-        let obj = Self::partial_euclidean(&A, &C);
+        let obj = Self::partial_euclidean(&A, &C, &self.L);
         let d = obj.d;
         let (mut v, /*mut*/ v2, v3) = (obj.v, obj.v2, obj.v3);
         if !obj.looped {
             let a2 = d.clone().square();
             let b2 = b + 2 * d * v3;
-            let f = Self::new(a2, b2).unwrap().reduce();
+            let f = self.new_alike(a2, b2).unwrap().reduce();
             return f;
         }
 
@@ -307,20 +342,20 @@ impl<T: TrDiscriminant + Clone + 'static> QuadForm<T> {
         }
         let a2 = d.clone().square() + &e * &v;
         let b2 = b2 + 2 * d * v3;
-        let f = Self::new(a2, b2).unwrap().reduce();
+        let f = self.new_alike(a2, b2).unwrap().reduce();
         return f;
     }
 
     /// Just negate B.
     #[inline]
     pub fn inv(&self) -> Self {
-        Self::new(self.a.clone(), -self.b.clone()).unwrap()
+        Self::new(self.a.clone(), -self.b.clone(), &self.Delta).unwrap()
     }
 
-    pub fn exp(&self, k: &Integer) -> Self {
+    pub fn exp(&self, k: impl Into<Integer>) -> Self {
         let mut base: Self = self.clone();
-        let mut res = T::identity().clone();
-        let mut expo = k.clone();
+        let mut res = self.new_identity();
+        let mut expo = k.into();
 
         if expo.is_negative() {
             base = self.inv();
@@ -340,15 +375,20 @@ impl<T: TrDiscriminant + Clone + 'static> QuadForm<T> {
     #[allow(unused)]
     /// Reimplement `def part_eucl(...)` of
     /// https://github.com/GiacomoPope/ClassGroups/blob/main/classgroup_helper.py
-    pub fn partial_euclidean(a: &Integer, b: &Integer) -> PartialEuclideanResult {
+    pub fn partial_euclidean(
+        a: impl Into<Integer>,
+        b: impl Into<Integer>,
+        L: impl Into<Integer>,
+    ) -> PartialEuclideanResult {
         let mut v = Integer::from(0);
         let mut v2 = Integer::from(1);
-        let mut v3 = b.clone();
-        let mut d = a.clone();
+        let mut v3 = b.into();
+        let mut d = a.into();
+        let L = L.into();
         let mut loop_is_odd = false;
         let mut looped = false;
 
-        while &v3.clone().abs() > T::L() {
+        while v3.clone().abs() > L {
             let (mut q, t3) = d.clone().div_rem_euc(v3.clone());
             let t2 = Integer::from(&v - &q * &v2);
             (v, d) = (v2, v3);
@@ -376,7 +416,8 @@ impl<T: TrDiscriminant + Clone + 'static> QuadForm<T> {
     pub fn from_bytes(buf: &[u8]) -> anyhow::Result<Self> {
         let obj: Self = serde_pickle::from_slice(buf, Default::default())
             .with_context(|| "Failed to deserialize a QuadForm")?;
-        let obj = Self::new(obj.a, obj.b).with_context(|| "Deserialized an invalid QuadForm")?;
+        let obj = Self::new(obj.a, obj.b, obj.Delta)
+            .with_context(|| "Deserialized an invalid QuadForm")?;
 
         Ok(obj)
     }

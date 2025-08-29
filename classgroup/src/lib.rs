@@ -3,7 +3,7 @@
 use rand::RngCore;
 use rug::{rand::RandState, Integer};
 
-pub mod cl_elgamal;
+// pub mod cl_elgamal;
 pub mod quadform;
 
 /// Do NOT use `RandState::new()` directly !
