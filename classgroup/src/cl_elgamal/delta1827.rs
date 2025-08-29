@@ -6,14 +6,14 @@ use serde::{Deserialize, Serialize};
 use crate::quadform::QuadForm;
 
 // $$\Delta_k = -pq$$.
-fn Delta_k() -> &'static Integer {
+pub fn Delta_K() -> &'static Integer {
     static DELTA_K: LazyLock<Integer> = LazyLock::new(|| -(p().clone() * q()));
     return &DELTA_K;
 }
 
 // $$\Delta_p = p^2 \Delta_K$$.
-fn Delta_p() -> &'static Integer {
-    static DELTA_P: LazyLock<Integer> = LazyLock::new(|| p().clone().square() * Delta_k());
+pub fn Delta_p() -> &'static Integer {
+    static DELTA_P: LazyLock<Integer> = LazyLock::new(|| p().clone().square() * Delta_K());
     &DELTA_P
 }
 
@@ -21,7 +21,7 @@ fn Delta_p() -> &'static Integer {
 // * secp256k1 curve order;
 // * conductor of class group;
 // * the exact order of ideal class $$f$$.
-fn p() -> &'static Integer {
+pub fn p() -> &'static Integer {
     static P: LazyLock<Integer> = LazyLock::new(|| {
         let digits =
             "115792089237316195423570985008687907852837564279074904382605163141518161494337";
@@ -31,7 +31,7 @@ fn p() -> &'static Integer {
     return &P;
 }
 
-fn q() -> &'static Integer {
+pub fn q() -> &'static Integer {
     static Q: LazyLock<Integer> = LazyLock::new(|| {
         let digits = String::new()
             + "48474472628700222923600969375027378087116755912885"
@@ -52,7 +52,7 @@ fn q() -> &'static Integer {
     return &Q;
 }
 
-fn f() -> &'static QuadForm {
+pub fn f() -> &'static QuadForm {
     static F: LazyLock<QuadForm> = LazyLock::new(|| {
         let a = p().clone().square();
         let b = p().clone();
@@ -61,7 +61,7 @@ fn f() -> &'static QuadForm {
     return &F;
 }
 
-fn generator_delta_p() -> &'static QuadForm {
+pub fn generator_delta_p() -> &'static QuadForm {
     static G: LazyLock<QuadForm> = LazyLock::new(|| {
         // g.a
         let digits = String::new()
@@ -94,7 +94,7 @@ fn generator_delta_p() -> &'static QuadForm {
 
 // This is the estimated upper bound of |G|, which is denoted as
 // $$\tilde s$$ in some research papers, e.g. [CL15].
-fn order_g_approx() -> &'static Integer {
+pub fn order_g_approx() -> &'static Integer {
     static ORDER_G: LazyLock<Integer> = LazyLock::new(|| {
         let digits = String::new()
             + "70874029964003222178994413383062782755071292199599"

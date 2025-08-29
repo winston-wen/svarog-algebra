@@ -1,4 +1,4 @@
-use crate::quadform::QuadForm;
+use classgroup::quadform::QuadForm;
 
 #[test]
 fn test_square() {

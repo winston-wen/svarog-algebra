@@ -3,8 +3,9 @@
 use rand::RngCore;
 use rug::{rand::RandState, Integer};
 
-// pub mod cl_elgamal;
+pub mod cl_elgamal;
 pub mod quadform;
+pub mod modulo_sqrt;
 
 /// Do NOT use `RandState::new()` directly !
 /// The above usage is given by rug document, which is quite misleading.
