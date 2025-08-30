@@ -1,26 +1,26 @@
 use rug::Integer;
-use serde::{ Deserialize, Serialize };
+use serde::{Deserialize, Serialize};
 
 use crate::quadform::QuadForm;
 
-use super::delta1280;
+use super::delta1024;
 
 /// Compute $$\psi: I(O_{\Delta_K}, p) \leftarrow I(O_{\Delta_p}, p)$$,
 /// where $$\psi(\mathfrak{a}) = \left[\varphi^{-1}(\mathfrak{a})\right]^p
 pub fn lift(gx: &QuadForm) -> QuadForm {
     let a2 = gx.a.clone();
     let double_a2 = a2.clone() * 2;
-    let b2 = gx.b.clone() * delta1280::p();
+    let b2 = gx.b.clone() * delta1024::p();
     let b2 = b2 % &double_a2;
-    let psi = QuadForm::new(a2, b2, delta1280::Delta_p()).unwrap();
-    let psi = psi.exp(delta1280::p());
+    let psi = QuadForm::new(a2, b2, delta1024::Delta_p()).unwrap();
+    let psi = psi.exp(delta1024::p());
     return psi;
 }
 
 pub fn keygen() -> (Integer, QuadForm) {
     let mut rng = crate::rug_seeded_rng();
-    let x = delta1280::order_g_approx().clone().random_below(&mut rng);
-    let gx = delta1280::generator_Delta_K().exp(&x);
+    let x = delta1024::order_g_approx().clone().random_below(&mut rng);
+    let gx = delta1024::generator_Delta_K().exp(&x);
     (x, gx)
 }
 
@@ -31,22 +31,22 @@ pub fn keygen() -> (Integer, QuadForm) {
 // bypassing the procedure of quadform composition.
 pub fn exp_f(m: impl Into<Integer>) -> QuadForm {
     let m: Integer = m.into();
-    let psquare = delta1280::f().a.clone();
-    let m = m.clone().modulo(delta1280::p());
+    let psquare = delta1024::f().a.clone();
+    let m = m.clone().modulo(delta1024::p());
     if m.is_zero() {
-        return QuadForm::new(1, 1, delta1280::Delta_p()).unwrap();
+        return QuadForm::new(1, 1, delta1024::Delta_p()).unwrap();
     }
-    let mut inv_m = m.clone().invert(delta1280::p()).unwrap();
+    let mut inv_m = m.clone().invert(delta1024::p()).unwrap();
     if inv_m.is_even() {
-        inv_m -= delta1280::p();
+        inv_m -= delta1024::p();
     }
-    let b = inv_m * delta1280::p();
-    return QuadForm::new(psquare, b, delta1280::Delta_p()).unwrap();
+    let b = inv_m * delta1024::p();
+    return QuadForm::new(psquare, b, delta1024::Delta_p()).unwrap();
 }
 
 pub fn log_f(fm: &QuadForm) -> Integer {
-    let inv_m = fm.b.clone() / delta1280::p();
-    let m = inv_m.invert(delta1280::p());
+    let inv_m = fm.b.clone() / delta1024::p();
+    let m = inv_m.invert(delta1024::p());
     if m.is_ok() {
         return m.unwrap();
     } else {
@@ -63,7 +63,7 @@ pub struct ClCiphertext {
 impl ClCiphertext {
     pub fn encrypt(
         m: &Integer,
-        h: &QuadForm // other's public key
+        h: &QuadForm, // other's public key
     ) -> (ClCiphertext, Integer) {
         let (r, gr) = keygen();
         let hr = h.exp(&r);
@@ -75,7 +75,7 @@ impl ClCiphertext {
 
     pub fn decrypt(
         &self,
-        x: &Integer // my secret key
+        x: &Integer, // my secret key
     ) -> Integer {
         let h_negr = self.gr.exp(&Integer::from(-x)); // construct $$h^{-r}$$.
         let h_negr = lift(&h_negr);
@@ -86,7 +86,7 @@ impl ClCiphertext {
 
     pub fn add_ct(
         &self,
-        other: &ClCiphertext //
+        other: &ClCiphertext, //
     ) -> ClCiphertext {
         ClCiphertext {
             gr: self.gr.mul(&other.gr),
@@ -96,7 +96,7 @@ impl ClCiphertext {
 
     pub fn add_pt(
         &self,
-        other: &Integer //
+        other: &Integer, //
     ) -> ClCiphertext {
         ClCiphertext {
             gr: self.gr.clone(),
@@ -106,7 +106,7 @@ impl ClCiphertext {
 
     pub fn mul_pt(
         &self,
-        other: &Integer //
+        other: &Integer, //
     ) -> ClCiphertext {
         ClCiphertext {
             gr: self.gr.exp(other),

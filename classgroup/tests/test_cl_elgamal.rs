@@ -1,13 +1,13 @@
-use rug::{ Complete, Integer };
+use rug::{Complete, Integer};
 
-use classgroup::{ cl_elgamal::*, rug_seeded_rng };
+use classgroup::{cl_elgamal::*, rug_seeded_rng};
 
 #[test]
 fn test_f_exp() {
     let mut rng = rug_seeded_rng();
     let m = Integer::random_bits(256, &mut rng).complete();
     println!("{}", &m);
-    let g1 = delta1280::f().exp(&m);
+    let g1 = delta1024::f().exp(&m);
     let g2 = exp_f(&m);
     assert_eq!(g1, g2);
 }
@@ -19,7 +19,7 @@ fn test_encdec() {
 
     let (x, h) = keygen();
     let (ct, _) = ClCiphertext::encrypt(&m, &h);
-    let m = m.modulo(delta1280::p());
+    let m = m.modulo(delta1024::p());
     let m2 = ct.decrypt(&x);
     assert_eq!(m, m2);
 }
@@ -37,7 +37,7 @@ fn test_lhe() {
         let (ct1, _) = ClCiphertext::encrypt(&m1, &h);
         let (ct2, _) = ClCiphertext::encrypt(&m2, &h);
         let ct = ct1.add_ct(&ct2);
-        let m_gt = Integer::from(&m1 + &m2).modulo(delta1280::p());
+        let m_gt = Integer::from(&m1 + &m2).modulo(delta1024::p());
         let m_eval = ct.decrypt(&x);
         assert_eq!(m_gt, m_eval);
     }
@@ -45,7 +45,7 @@ fn test_lhe() {
     '_test_add_pt: {
         let (ct, _) = ClCiphertext::encrypt(&m1, &h);
         let ct = ct.add_pt(&m2);
-        let m_gt = Integer::from(&m1 + &m2).modulo(delta1280::p());
+        let m_gt = Integer::from(&m1 + &m2).modulo(delta1024::p());
         let m_eval = ct.decrypt(&x);
         assert_eq!(m_gt, m_eval);
     }
@@ -53,7 +53,7 @@ fn test_lhe() {
     '_test_mul_pt: {
         let (ct, _) = ClCiphertext::encrypt(&m1, &h);
         let ct = ct.mul_pt(&m2);
-        let m_gt = Integer::from(&m1 * &m2).modulo(delta1280::p());
+        let m_gt = Integer::from(&m1 * &m2).modulo(delta1024::p());
         let m_eval = ct.decrypt(&x);
         assert_eq!(m_gt, m_eval)
     }
@@ -74,8 +74,8 @@ fn test_mta() {
     let uji_ct = ki_ct.mul_pt(&wj).add_pt(&neg_vji);
 
     let uji = uji_ct.decrypt(&sk);
-    let lhs = (uji + vji) % delta1280::p();
-    let rhs = (ki * wj) % delta1280::p();
+    let lhs = (uji + vji) % delta1024::p();
+    let rhs = (ki * wj) % delta1024::p();
     assert_eq!(lhs, rhs);
 }
 
@@ -89,7 +89,7 @@ fn bench_exp() {
         let mut rand = rug_seeded_rng();
         let e = Integer::from(Integer::random_bits(256, &mut rand));
         let timer = std::time::Instant::now();
-        let _ = delta1280::generator_Delta_K().exp(&e);
+        let _ = delta1024::generator_Delta_K().exp(&e);
         t_ms += timer.elapsed().as_millis();
     }
     let avg = t_ms / n;
@@ -99,6 +99,6 @@ fn bench_exp() {
 
 #[test]
 fn show_log2_of_order() {
-    let ord_len = delta1280::order_g_approx().significant_bits();
+    let ord_len = delta1024::order_g_approx().significant_bits();
     println!("{ord_len}"); // 1083
 }

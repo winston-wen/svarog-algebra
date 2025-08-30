@@ -21,7 +21,7 @@ pub fn p() -> &'static Integer {
 pub fn q() -> &'static Integer {
     static Q: LazyLock<Integer> = LazyLock::new(|| {
         let p = p();
-        let mut q = p.clone().square().square();
+        let mut q = p.clone().pow(3).next_prime();
         let mut cond = false;
         while !cond {
             q = q.next_prime();
@@ -77,6 +77,7 @@ pub fn generator_Delta_K() -> &'static QuadForm {
 // This is the estimated upper bound of |G|, which is denoted as
 // $$\tilde s = \lfloor \sqrt{\Delta_K} \rfloor$$ in some research papers, e.g. [CL15].
 pub fn order_g_approx() -> &'static Integer {
-    static ORDER_G: LazyLock<Integer> = LazyLock::new(|| Delta_K().clone().abs().sqrt().prev_prime());
+    static ORDER_G: LazyLock<Integer> =
+        LazyLock::new(|| Delta_K().clone().abs().sqrt().prev_prime());
     return &ORDER_G;
 }
