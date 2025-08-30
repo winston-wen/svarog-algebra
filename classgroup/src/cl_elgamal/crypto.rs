@@ -1,5 +1,5 @@
 use rug::Integer;
-use serde::{Deserialize, Serialize};
+use serde::{ Deserialize, Serialize };
 
 use crate::quadform::QuadForm;
 
@@ -11,8 +11,10 @@ pub fn lift(gx: &QuadForm) -> QuadForm {
     let a2 = gx.a.clone();
     let double_a2 = a2.clone() * 2;
     let b2 = gx.b.clone() * delta1280::p();
-    let b2 = b2.modulo(&double_a2) - &a2;
-    return QuadForm::new(a2, b2, delta1280::Delta_p()).unwrap();
+    let b2 = b2 % &double_a2;
+    let psi = QuadForm::new(a2, b2, delta1280::Delta_p()).unwrap();
+    let psi = psi.exp(delta1280::p());
+    return psi;
 }
 
 pub fn keygen() -> (Integer, QuadForm) {
@@ -61,10 +63,11 @@ pub struct ClCiphertext {
 impl ClCiphertext {
     pub fn encrypt(
         m: &Integer,
-        h: &QuadForm, // other's public key
+        h: &QuadForm // other's public key
     ) -> (ClCiphertext, Integer) {
         let (r, gr) = keygen();
         let hr = h.exp(&r);
+        let hr = lift(&hr);
         let fm = exp_f(m);
         let hrfm = hr.mul(&fm);
         (ClCiphertext { gr, hrfm }, r)
@@ -72,9 +75,10 @@ impl ClCiphertext {
 
     pub fn decrypt(
         &self,
-        x: &Integer, // my secret key
+        x: &Integer // my secret key
     ) -> Integer {
         let h_negr = self.gr.exp(&Integer::from(-x)); // construct $$h^{-r}$$.
+        let h_negr = lift(&h_negr);
         let fm = self.hrfm.mul(&h_negr); // cancel $$h^r$$, homomorphicly.
         let m = log_f(&fm);
         m
@@ -82,7 +86,7 @@ impl ClCiphertext {
 
     pub fn add_ct(
         &self,
-        other: &ClCiphertext, //
+        other: &ClCiphertext //
     ) -> ClCiphertext {
         ClCiphertext {
             gr: self.gr.mul(&other.gr),
@@ -92,7 +96,7 @@ impl ClCiphertext {
 
     pub fn add_pt(
         &self,
-        other: &Integer, //
+        other: &Integer //
     ) -> ClCiphertext {
         ClCiphertext {
             gr: self.gr.clone(),
@@ -102,7 +106,7 @@ impl ClCiphertext {
 
     pub fn mul_pt(
         &self,
-        other: &Integer, //
+        other: &Integer //
     ) -> ClCiphertext {
         ClCiphertext {
             gr: self.gr.exp(other),
