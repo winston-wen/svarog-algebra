@@ -1,7 +1,10 @@
 #![allow(nonstandard_style)]
 
+use std::time::Duration;
+
 use classgroup::{cl_elgamal::delta1827, generator_utils::sqrt_mod4p, quadform::QuadForm};
-use rug::{Complete, Integer, ops::Pow};
+use indicatif::{ProgressBar, ProgressStyle};
+use rug::{Integer, ops::Pow};
 
 fn main() {
     let p = delta1827::p(); // p mod 4 == 1
@@ -36,17 +39,32 @@ fn main() {
     println!("g.a = {}", g.a.to_string_radix(16));
     println!("g.b = {}", g.b.to_string_radix(16));
 
+    println!("====================");
+    println!("Checking if ⟨g⟩ is safe.");
+
+    let beg = 1;
+    let end = 10_0000;
+    let progbar = ProgressBar::new(end - beg + 1);
+    progbar.set_style(
+        ProgressStyle::with_template("{percent:>3.1}% |{bar:50}| ({eta})")
+            .unwrap()
+            .progress_chars("#o-"),
+    );
+    progbar.enable_steady_tick(Duration::from_millis(500));
+    progbar.set_prefix("Test g^p");
+
     let mut p = Integer::from(2);
-    for k in 1..=100 {
-        let n = 1_0000;
-        for _ in 0..n {
-            let x = g.exp(p.clone());
-            if x == g {
-                println!("x has small prime order: {}", &p);
-                return;
-            }
-            p = p.next_prime();
+    let id = g.new_identity();
+    for _ in beg..=end {
+        let gp = g.exp(p.clone());
+        if gp == id {
+            progbar.abandon();
+            println!("⟨g⟩ has small prime subgroup of order: {}", &p);
+            return;
         }
-        println!("check {} primes", k * n);
+        p = p.next_prime();
+        progbar.inc(1);
     }
+    progbar.finish();
+    println!("Lucky! ⟨g⟩ has no small prime subgroup.")
 }

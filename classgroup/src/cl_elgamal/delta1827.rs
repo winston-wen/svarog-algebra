@@ -1,21 +1,8 @@
 use std::{str::FromStr, sync::LazyLock};
 
 use rug::Integer;
-use serde::{Deserialize, Serialize};
 
 use crate::quadform::QuadForm;
-
-// $$\Delta_k = -pq$$.
-pub fn Delta_K() -> &'static Integer {
-    static DELTA_K: LazyLock<Integer> = LazyLock::new(|| -(p().clone() * q()));
-    return &DELTA_K;
-}
-
-// $$\Delta_p = p^2 \Delta_K$$.
-pub fn Delta_p() -> &'static Integer {
-    static DELTA_P: LazyLock<Integer> = LazyLock::new(|| p().clone().square() * Delta_K());
-    &DELTA_P
-}
 
 // The parameter $$p$$ is
 // * secp256k1 curve order;
@@ -52,6 +39,18 @@ pub fn q() -> &'static Integer {
     return &Q;
 }
 
+// $$\Delta_k = -pq$$.
+pub fn Delta_K() -> &'static Integer {
+    static DELTA_K: LazyLock<Integer> = LazyLock::new(|| -(p().clone() * q()));
+    return &DELTA_K;
+}
+
+// $$\Delta_p = p^2 \Delta_K$$.
+pub fn Delta_p() -> &'static Integer {
+    static DELTA_P: LazyLock<Integer> = LazyLock::new(|| p().clone().square() * Delta_K());
+    &DELTA_P
+}
+
 pub fn f() -> &'static QuadForm {
     static F: LazyLock<QuadForm> = LazyLock::new(|| {
         let a = p().clone().square();
@@ -61,7 +60,7 @@ pub fn f() -> &'static QuadForm {
     return &F;
 }
 
-pub fn generator_delta_p() -> &'static QuadForm {
+pub fn generator_Delta_p() -> &'static QuadForm {
     static G: LazyLock<QuadForm> = LazyLock::new(|| {
         // g.a
         let digits = String::new()

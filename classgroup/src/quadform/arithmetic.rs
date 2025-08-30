@@ -45,6 +45,17 @@ impl QuadForm {
         Ok(res)
     }
 
+    #[inline]
+    pub fn new_identity(&self) -> Self {
+        // Here we trust that `self.Delta` and `self.L` are correct.
+        return Self {
+            a: (1).into(),
+            b: (1).into(),
+            Delta: self.Delta.clone(),
+            L: self.L.clone(),
+        };
+    }
+
     pub fn new_alike(&self, a: impl Into<Integer>, b: impl Into<Integer>) -> anyhow::Result<Self> {
         let a = a.into();
         let b = b.into();
@@ -123,17 +134,6 @@ impl QuadForm {
             }
         }
         ret
-    }
-
-    #[inline]
-    pub fn new_identity(&self) -> Self {
-        // Here we trust that `self.Delta` and `self.L` are correct.
-        return Self {
-            a: 1.into(),
-            b: 1.into(),
-            Delta: self.Delta.clone(),
-            L: self.L.clone(),
-        };
     }
 
     // [Cohen1993, Algorithm 5.4.2]

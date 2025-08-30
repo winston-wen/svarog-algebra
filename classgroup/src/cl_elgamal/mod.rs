@@ -1,6 +1,7 @@
-// mod crypto;
-// pub use crypto::*;
+mod crypto;
+pub use crypto::*;
 
+pub mod delta1280;
 pub mod delta1827;
 
 // #[cfg(test)]

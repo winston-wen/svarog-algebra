@@ -1,14 +1,24 @@
 use rug::Integer;
 use serde::{Deserialize, Serialize};
 
-use crate::quadform::{Delta1827bit, QuadForm, TrDiscriminant};
+use crate::quadform::QuadForm;
 
-pub fn keygen() -> (Integer, QuadForm<Delta1827bit>) {
+use super::delta1280;
+
+/// Compute $$\psi: I(O_{\Delta_K}, p) \leftarrow I(O_{\Delta_p}, p)$$,
+/// where $$\psi(\mathfrak{a}) = \left[\varphi^{-1}(\mathfrak{a})\right]^p
+pub fn lift(gx: &QuadForm) -> QuadForm {
+    let a2 = gx.a.clone();
+    let double_a2 = a2.clone() * 2;
+    let b2 = gx.b.clone() * delta1280::p();
+    let b2 = b2.modulo(&double_a2) - &a2;
+    return QuadForm::new(a2, b2, delta1280::Delta_p()).unwrap();
+}
+
+pub fn keygen() -> (Integer, QuadForm) {
     let mut rng = crate::rug_seeded_rng();
-    let x = Delta1827bit::order_g_approx()
-        .clone()
-        .random_below(&mut rng);
-    let gx = Delta1827bit::generator().exp(&x);
+    let x = delta1280::order_g_approx().clone().random_below(&mut rng);
+    let gx = delta1280::generator_Delta_K().exp(&x);
     (x, gx)
 }
 
@@ -17,23 +27,24 @@ pub fn keygen() -> (Integer, QuadForm<Delta1827bit>) {
 // where $$m^{-1}$$ is an odd integer such that $$ m^{-1} m \equiv 1 \pmod p$$.
 // The above properties enables us to compute $$f^m$$ in $$O(1)$$ time complexity,
 // bypassing the procedure of quadform composition.
-pub fn exp_f(m: &Integer) -> QuadForm<Delta1827bit> {
-    let psquare = Delta1827bit::f().a.clone();
-    let m = m.clone().modulo(Delta1827bit::p());
+pub fn exp_f(m: impl Into<Integer>) -> QuadForm {
+    let m: Integer = m.into();
+    let psquare = delta1280::f().a.clone();
+    let m = m.clone().modulo(delta1280::p());
     if m.is_zero() {
-        return Delta1827bit::identity().clone();
+        return QuadForm::new(1, 1, delta1280::Delta_p()).unwrap();
     }
-    let mut inv_m = m.clone().invert(Delta1827bit::p()).unwrap();
+    let mut inv_m = m.clone().invert(delta1280::p()).unwrap();
     if inv_m.is_even() {
-        inv_m -= Delta1827bit::p();
+        inv_m -= delta1280::p();
     }
-    let b = inv_m * Delta1827bit::p();
-    QuadForm::new(psquare, b).unwrap()
+    let b = inv_m * delta1280::p();
+    return QuadForm::new(psquare, b, delta1280::Delta_p()).unwrap();
 }
 
-pub fn log_f(fm: &QuadForm<Delta1827bit>) -> Integer {
-    let inv_m = fm.b.clone() / Delta1827bit::p();
-    let m = inv_m.invert(Delta1827bit::p());
+pub fn log_f(fm: &QuadForm) -> Integer {
+    let inv_m = fm.b.clone() / delta1280::p();
+    let m = inv_m.invert(delta1280::p());
     if m.is_ok() {
         return m.unwrap();
     } else {
@@ -43,14 +54,14 @@ pub fn log_f(fm: &QuadForm<Delta1827bit>) -> Integer {
 
 #[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
 pub struct ClCiphertext {
-    pub gr: QuadForm<Delta1827bit>,
-    pub hrfm: QuadForm<Delta1827bit>,
+    pub gr: QuadForm,
+    pub hrfm: QuadForm,
 }
 
 impl ClCiphertext {
     pub fn encrypt(
         m: &Integer,
-        h: &QuadForm<Delta1827bit>, // other's public key
+        h: &QuadForm, // other's public key
     ) -> (ClCiphertext, Integer) {
         let (r, gr) = keygen();
         let hr = h.exp(&r);
