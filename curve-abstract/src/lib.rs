@@ -3,8 +3,8 @@ use std::fmt::Debug;
 use serde::{Deserialize, Serialize};
 
 pub trait TrCurve: Sized {
-    type PointT: TrPoint<Self>;
-    type ScalarT: TrScalar<Self>;
+    type PointT: TrPoint<Self> + Default;
+    type ScalarT: TrScalar<Self> + Default;
 
     fn curve_order() -> &'static [u8];
     fn field_order() -> &'static [u8];

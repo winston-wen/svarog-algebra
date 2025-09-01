@@ -1,16 +1,17 @@
 #![allow(nonstandard_style)]
 
-use std::{ str::FromStr, time::Duration };
+use std::{str::FromStr, time::Duration};
 
-use classgroup::{ cl_elgamal::delta1827, generator_utils::sqrt_mod4p, quadform::QuadForm };
-use indicatif::{ ProgressBar, ProgressStyle };
-use rug::{ Integer, ops::Pow };
+use classgroup::{generator_utils::sqrt_mod4p, quadform::QuadForm};
+use indicatif::{ProgressBar, ProgressStyle};
+use rug::{Integer, ops::Pow};
 
 fn main() {
     // p mod 4 == 1
     let p = Integer::from_str(
-        "115792089237316195423570985008687907852837564279074904382605163141518161494337"
-    ).unwrap();
+        "115792089237316195423570985008687907852837564279074904382605163141518161494337",
+    )
+    .unwrap();
 
     let mut q = p.clone().pow(3).next_prime();
     let mut cond = false;

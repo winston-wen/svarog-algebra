@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::{Point, Scalar};
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-pub enum Curve25519 {}
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Curve25519 {}
 
 impl TrCurve for Curve25519 {
     type PointT = Point;
