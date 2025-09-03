@@ -87,7 +87,7 @@ fn bench_exp() {
     let n: u128 = 100;
     for _ in 0..n {
         let mut rand = rug_seeded_rng();
-        let e = Integer::from(Integer::random_bits(256*6, &mut rand));
+        let e = Integer::from(Integer::random_bits(256 * 6, &mut rand));
         let timer = std::time::Instant::now();
         let _ = delta1792::generator_Delta_K().exp(&e);
         t_ms += timer.elapsed().as_millis();
