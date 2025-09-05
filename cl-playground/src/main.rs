@@ -97,8 +97,13 @@ fn main() {
     progbar.enable_steady_tick(Duration::from_millis(500));
 
     let id = g.new_identity();
+    let mut gp = id.clone();
+    let mut p_prev = Integer::from(0);
     for _ in beg..=end {
-        let gp = g.exp(p.clone());
+        let advance = p.clone() - &p_prev;
+        // It's more clever than computing `g.exp(p)`.
+        gp = g.exp(advance).mul(&gp);
+        p_prev = p.clone();
         if gp == id {
             progbar.abandon();
             println!("⟨g⟩ has small prime subgroup of order: {}", &p);
