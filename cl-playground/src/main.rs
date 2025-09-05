@@ -13,7 +13,8 @@ fn main() {
     )
     .unwrap();
 
-    let mut q = p.clone().pow(3).next_prime();
+    let q: Integer = Integer::from(1) << (1826 - 256);
+    let mut q = q.next_prime();
     let mut cond = false;
     while !cond {
         q = q.next_prime();
@@ -49,7 +50,8 @@ fn main() {
     println!("====================");
     let beg = 1;
     let end = 20_0000;
-    println!("This program will check if $$g^p=0$$ for p from No.{beg} prime to No.{end} prime.");
+    println!("This program will check if $$g^p=0$$ for p,");
+    println!("\tfrom prime No.{beg} to prime No.{end}.");
     println!("First, we find the No.{beg} prime.");
 
     let progbar = ProgressBar::new(beg);

@@ -1,8 +1,8 @@
 use std::{str::FromStr, sync::LazyLock};
 
-use rug::Integer;
+use rug::{Integer, ops::Pow};
 
-use crate::quadform::QuadForm;
+use crate::{generator_utils::sqrt_mod4p, quadform::QuadForm};
 
 // The parameter $$p$$ is
 // * secp256k1 curve order;
@@ -18,23 +18,13 @@ pub fn p() -> &'static Integer {
     return &P;
 }
 
+/// The least prime $$q$$ such that
+/// $$ q > 2^{1827-256}, (p/q) = (q/p) = 1, q = 3 \pmod 4 $$.
 pub fn q() -> &'static Integer {
     static Q: LazyLock<Integer> = LazyLock::new(|| {
-        let digits = String::new()
-            + "48474472628700222923600969375027378087116755912885"
-            + "87788495719189273446748546445177624419173867057605"
-            + "51016463948293585828503413171858012696345486012888"
-            + "32514770523674044351404340503270850746146295547003"
-            + "64356098056533837497119748587811197297927778529919"
-            + "23912450015197293099774936765720942209602972662597"
-            + "73135110240079006671204851235107353298185846649703"
-            + "90531374794858383583283696733028838887186219054732"
-            + "73726378383329304439900099298658002101894316845131"
-            + "75995537260100115381365951108406182362250863655200"
-            + "39481895959255506876183366040440174295566297882006"
-            + "7822065312853937663";
-        let res = Integer::from_str(&digits).unwrap();
-        res
+        let mut q = vec![0u8; 197];
+        (q[0], q[195], q[196]) = (0x04, 0x04, 0x0b);
+        Integer::from_digits(&q, rug::integer::Order::Msf)
     });
     return &Q;
 }
@@ -60,51 +50,24 @@ pub fn f() -> &'static QuadForm {
     return &F;
 }
 
-pub fn generator_Delta_p() -> &'static QuadForm {
+pub fn generator_Delta_K() -> &'static QuadForm {
     static G: LazyLock<QuadForm> = LazyLock::new(|| {
-        // g.a
-        let digits = String::new()
-            + "33799333618379597504442812678860818344767515871521"
-            + "91195702130129876229099797314884670653751744957540"
-            + "13708310221036914571883142408342121304069845236338"
-            + "72990658260905666145505091041715961939407084528014"
-            + "46727936908797340323098201338663853170233065328696"
-            + "85679008242206927509296739979441372389551408836395"
-            + "14583749367508061843954725442677806535751234616550"
-            + "52057240595359404437943529185106860238910043016082";
-        let a = Integer::from_str(&digits).unwrap();
-
-        // g.b
-        let digits = String::new()
-            + "58358596530709071629230628954813789065094567413901"
-            + "15173250460405445996130246571504137037236495025406"
-            + "20524141771755836193445321542771727610998914641435"
-            + "83046235404103174114873829883081661462607082144282"
-            + "56894699546993136617207192803136225253872135816913"
-            + "76433867317288963211366773277788622600301760076870"
-            + "15790858390775199286445826383171957023481318023285"
-            + "705914617463624817890014105071550499557399120835";
-        let b = Integer::from_str(&digits).unwrap();
-
-        QuadForm::new(a, b, Delta_p()).unwrap()
+        let Delta_K = Delta_K();
+        let mut ra = Integer::from(2).pow(512).next_prime();
+        while Delta_K.kronecker(&ra) != 1 {
+            ra = ra.next_prime();
+        }
+        let rb = sqrt_mod4p(Delta_K, &ra).unwrap();
+        let g = QuadForm::new(ra, rb, Delta_K).unwrap().square();
+        return g;
     });
     return &G;
 }
 
 // This is the estimated upper bound of |G|, which is denoted as
-// $$\tilde s$$ in some research papers, e.g. [CL15].
+// $$\tilde s = \lfloor \sqrt{\Delta_K} \rfloor$$ in some research papers, e.g. [CL15].
 pub fn order_g_approx() -> &'static Integer {
-    static ORDER_G: LazyLock<Integer> = LazyLock::new(|| {
-        let digits = String::new()
-            + "70874029964003222178994413383062782755071292199599"
-            + "73297684376464648879140029924517335736762241468971"
-            + "59046777641756836926990886237520223776483585568680"
-            + "28456505343659927114861398173913787770528036913753"
-            + "91771478429036676214714932549995049179049799644100"
-            + "63027828233706155968124702241849857898213763251030"
-            + "06605987671787325355230432";
-        let res = Integer::from_str(&digits).unwrap();
-        res
-    });
+    static ORDER_G: LazyLock<Integer> =
+        LazyLock::new(|| Delta_K().clone().abs().sqrt().prev_prime());
     return &ORDER_G;
 }
