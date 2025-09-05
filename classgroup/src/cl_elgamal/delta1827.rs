@@ -23,7 +23,7 @@ pub fn p() -> &'static Integer {
 pub fn q() -> &'static Integer {
     static Q: LazyLock<Integer> = LazyLock::new(|| {
         let mut q = vec![0u8; 197];
-        (q[0], q[195], q[196]) = (0x04, 0x04, 0x0b);
+        (q[0], q[195], q[196]) = (0x08, 0x1d, 0x93);
         Integer::from_digits(&q, rug::integer::Order::Msf)
     });
     return &Q;

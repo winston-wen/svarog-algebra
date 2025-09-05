@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+clap = "4.5.47"
 classgroup = { path = "../classgroup" }
 indicatif = { version = "0.18.0" }
 rug = { version = "1.28.0", features = ["serde"] }
