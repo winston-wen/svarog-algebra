@@ -1,6 +1,7 @@
 #![allow(nonstandard_style)]
 
-use std::{str::FromStr, time::Duration};
+use std::io::Write;
+use std::{fs::OpenOptions, path::PathBuf, str::FromStr, time::Duration};
 
 use clap::{Arg, ArgAction, Command, value_parser};
 use classgroup::{generator_utils::sqrt_mod4p, quadform::QuadForm};
@@ -77,6 +78,18 @@ fn main() {
     println!("\tfrom prime No.{beg} to prime No.{end}.");
     println!("First, we find prime No.{beg}.");
 
+    let mut file = {
+        let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+        let file_path = PathBuf::from(home).join(format!("cl-p{beg}-p{end}.txt"));
+        let file = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .truncate(true)
+            .open(&file_path)
+            .unwrap();
+        file
+    };
+
     let progbar = ProgressBar::new(beg as u64);
     progbar.set_style(style.clone());
     progbar.enable_steady_tick(Duration::from_millis(500));
@@ -99,16 +112,28 @@ fn main() {
     let id = g.new_identity();
     let mut gp = id.clone();
     let mut p_prev = Integer::from(0);
-    for _ in beg..=end {
-        let advance = p.clone() - &p_prev;
+    for i in beg..=end {
         // It's more clever than computing `g.exp(p)`.
+        let advance = p.clone() - &p_prev;
         gp = g.exp(advance).mul(&gp);
         p_prev = p.clone();
         if gp == id {
             progbar.abandon();
             println!("⟨g⟩ has small prime subgroup of order: {}", &p);
+            writeln!(file, "p{i} fucked up").unwrap();
+            file.sync_all().unwrap();
             return;
         }
+
+        // write to file
+        '_write_file: {
+            // use std::io::{Seek, SeekFrom};
+            // file.seek(SeekFrom::Start(0)).unwrap();
+            // file.set_len(0).unwrap();
+            writeln!(file, "p{i}").unwrap();
+            file.sync_all().unwrap();
+        }
+
         p = p.next_prime();
         progbar.inc(1);
     }
