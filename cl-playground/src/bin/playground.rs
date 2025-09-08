@@ -3,36 +3,16 @@
 use std::io::Write;
 use std::{fs::OpenOptions, path::PathBuf, str::FromStr, time::Duration};
 
+use cl_playground::MmapVecU64;
 use clap::{Arg, ArgAction, Command, value_parser};
 use classgroup::{generator_utils::sqrt_mod4p, quadform::QuadForm};
 use indicatif::{ProgressBar, ProgressStyle};
 use rug::{Integer, ops::Pow};
 
-fn main() {
-    let matches = Command::new("cl-playground")
-        .arg(
-            Arg::new("from")
-                .short('f')
-                .required(false)
-                .default_value("1")
-                .value_parser(value_parser!(i32))
-                .action(ArgAction::Set),
-        )
-        .arg(
-            Arg::new("to")
-                .short('t')
-                .required(false)
-                .default_value("200000")
-                .value_parser(value_parser!(i32))
-                .action(ArgAction::Set),
-        )
-        .get_matches();
-    let beg: i32 = matches.get_one::<i32>("from").unwrap().to_owned();
-    let end: i32 = matches.get_one::<i32>("to").unwrap().to_owned();
-    assert!(beg >= 1, "command arg from >= 1");
-    assert!(end >= beg, "command arg to >= from");
-    let (beg, end) = (beg, end);
+// mod cached;
+// use cached::*;
 
+fn main() {
     // p mod 4 == 1
     let p = Integer::from_str(
         "115792089237316195423570985008687907852837564279074904382605163141518161494337",
@@ -69,55 +49,52 @@ fn main() {
     let rb = sqrt_mod4p(&Delta_K, ra.clone()).unwrap();
     let g = QuadForm::new(&ra, &rb, &Delta_K).unwrap().square();
 
-    let style = ProgressStyle::with_template("{percent:>3.1}% |{bar:50}| ({eta})")
-        .unwrap()
-        .progress_chars("#o-");
-
     println!("====================");
     println!("This program will check if $$g^p=0$$ for p,");
-    println!("\tfrom prime No.{beg} to prime No.{end}.");
-    println!("First, we find prime No.{beg}.");
+    println!("\tfrom p{beg} to p{end}.");
 
-    let mut file = {
+    let primes = {
         let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-        let file_path = PathBuf::from(home).join(format!("cl-p{beg}-p{end}.txt"));
-        let file = OpenOptions::new()
-            .create(true)
-            .write(true)
-            .truncate(true)
-            .open(&file_path)
-            .unwrap();
-        file
+        let path = format!("{home}/primes/prime.dat");
+        let primes = MmapVecU64::from_file(&path).unwrap();
+        primes
     };
 
-    let progbar = ProgressBar::new(beg as u64);
-    progbar.set_style(style.clone());
-    progbar.enable_steady_tick(Duration::from_millis(500));
-    let mut p = Integer::from(2);
-    progbar.inc(1);
-    for _ in 1..beg {
-        p = p.next_prime();
-        progbar.inc(1);
-    }
-    progbar.finish();
-    println!("Found No.{beg} prime = {}", &p);
+    let g2t = {
+        let nbits = primes[end as usize].significant_bits() as usize;
+        let mut res = vec![g.clone(); nbits];
+        for t in 1..nbits {
+            res[t] = res[t - 1].square();
+        }
+        res
+    };
+
+    let g_exp = |p: &Integer| -> QuadForm {
+        let mut res = g.new_identity();
+        for t in 0..p.significant_bits() {
+            if p.get_bit(t as u32) {
+                res = res.mul(&g2t[t as usize]);
+            }
+        }
+        res
+    };
 
     println!("====================");
     println!("Checking if ⟨g⟩ is safe.");
 
     let progbar = ProgressBar::new((end - beg + 1) as u64);
+    let style = ProgressStyle::with_template("{percent:>3.1}% |{bar:50}| ({per_sec}, {eta})")
+        .unwrap()
+        .progress_chars("#o-");
     progbar.set_style(style.clone());
     progbar.enable_steady_tick(Duration::from_millis(500));
 
-    let id = g.new_identity();
-    let mut gp = id.clone();
-    let mut p_prev = Integer::from(0);
     for i in beg..=end {
-        // It's more clever than computing `g.exp(p)`.
-        let advance = p.clone() - &p_prev;
-        gp = g.exp(advance).mul(&gp);
-        p_prev = p.clone();
-        if gp == id {
+        let p = &primes[i as usize];
+        let gp = g_exp(p);
+        let gp2 = g.exp(p);
+        assert_eq!(gp, gp2);
+        if gp.is_identity() {
             progbar.abandon();
             println!("⟨g⟩ has small prime subgroup of order: {}", &p);
             writeln!(file, "p{i} fucked up").unwrap();
@@ -134,7 +111,6 @@ fn main() {
             file.sync_all().unwrap();
         }
 
-        p = p.next_prime();
         progbar.inc(1);
     }
     progbar.finish();

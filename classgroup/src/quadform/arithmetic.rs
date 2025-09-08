@@ -88,6 +88,12 @@ impl QuadForm {
 
     // Check if $$\gcd(a, b, c) = 1$$.
     #[inline]
+    pub fn is_identity(&self) -> bool {
+        return self.a == 1 && self.b == 1;
+    }
+
+    // Check if $$\gcd(a, b, c) = 1$$.
+    #[inline]
     pub fn is_primitive(&self, gcd_abc: Option<&mut Integer>) -> bool {
         let c = self.get_c();
         let mut gcd = self.a.clone().gcd(&self.b);
@@ -302,8 +308,7 @@ impl QuadForm {
         }
         let a3 = d * b + e * v;
         let b3 = Q1 + Q2 + d1 * (Q3 + Q4);
-        let form = self.new_alike(a3, b3).unwrap().reduce();
-        return form;
+        return self.new_alike(a3, b3).unwrap().reduce();
     }
 
     /// [Cohen1993, Algorithm 5.4.8] NUDUPL
@@ -329,8 +334,7 @@ impl QuadForm {
         if !obj.looped {
             let a2 = d.clone().square();
             let b2 = b + 2 * d * v3;
-            let f = self.new_alike(a2, b2).unwrap().reduce();
-            return f;
+            return self.new_alike(a2, b2).unwrap().reduce();
         }
 
         let e = (c * &v + &B * &d) / &A;
@@ -342,8 +346,7 @@ impl QuadForm {
         }
         let a2 = d.clone().square() + &e * &v;
         let b2 = b2 + 2 * d * v3;
-        let f = self.new_alike(a2, b2).unwrap().reduce();
-        return f;
+        return self.new_alike(a2, b2).unwrap().reduce();
     }
 
     /// Just negate B.
