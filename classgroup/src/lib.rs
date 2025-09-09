@@ -5,6 +5,7 @@ use rug::{Integer, rand::RandState};
 
 pub mod cl_elgamal;
 pub mod generator_utils;
+pub mod naf;
 pub mod quadform;
 
 /// Do NOT use `RandState::new()` directly !
@@ -18,3 +19,6 @@ pub fn rug_seeded_rng() -> RandState<'static> {
     rng.seed(&seed);
     rng
 }
+
+#[cfg(test)]
+mod tests;

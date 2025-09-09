@@ -1,6 +1,6 @@
 use rug::{Complete, Integer};
 
-use classgroup::{cl_elgamal::*, rug_seeded_rng};
+use crate::{cl_elgamal::*, rug_seeded_rng};
 
 #[test]
 fn test_f_exp() {

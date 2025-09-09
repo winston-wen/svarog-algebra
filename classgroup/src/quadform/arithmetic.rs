@@ -4,6 +4,8 @@ use anyhow::{Context, Ok, ensure};
 use rug::Integer;
 use serde::{Deserialize, Serialize};
 
+use crate::naf::{NafDigit, NafInteger};
+
 #[derive(Serialize, Deserialize, Clone, Default, PartialEq, Eq)]
 pub struct QuadForm {
     pub a: Integer,
@@ -181,7 +183,7 @@ impl QuadForm {
 
     // [Cohen1993, Algorithm 5.4.7] (not NUCOMP)
     // NUCOMP is [Cohen1993, Algorithm 5.4.9]
-    pub fn mul_naive(&self, other: &Self) -> Self {
+    pub(crate) fn mul_naive(&self, other: &Self) -> Self {
         let (mut a1, mut b1, mut c1) = (self.a.clone(), self.b.clone(), self.get_c());
         let (mut a2, mut b2, mut c2) = (other.a.clone(), other.b.clone(), other.get_c());
 
@@ -355,7 +357,7 @@ impl QuadForm {
         Self::new(self.a.clone(), -self.b.clone(), &self.Delta).unwrap()
     }
 
-    pub fn exp(&self, k: impl Into<Integer>) -> Self {
+    pub(crate) fn exp_naive(&self, k: impl Into<Integer>) -> Self {
         let mut base: Self = self.clone();
         let mut res = self.new_identity();
         let mut expo = k.into();
@@ -373,6 +375,37 @@ impl QuadForm {
             expo >>= 1;
         }
         res
+    }
+
+    pub fn exp(&self, k: impl Into<Integer>) -> Self {
+        let mut base: Self = self.clone();
+        let mut res = self.new_identity();
+
+        let mut expo = k.into();
+        if expo.is_negative() {
+            base = self.inv();
+            expo = -expo;
+        }
+        let base = base;
+
+        let expo = NafInteger::from_integer(expo);
+        expo.validate().unwrap();
+
+        for naf_digit in expo.iter().rev() {
+            res = res.square();
+
+            match naf_digit {
+                NafDigit::One => {
+                    res = res.mul(&base);
+                }
+                NafDigit::NegOne => {
+                    res = res.mul(&base.inv());
+                }
+                NafDigit::Zero => {}
+            }
+        }
+
+        return res;
     }
 
     #[allow(unused)]

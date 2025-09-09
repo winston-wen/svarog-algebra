@@ -1,4 +1,4 @@
-use classgroup::{generator_utils::crt, rug_seeded_rng};
+use crate::{generator_utils::crt, rug_seeded_rng};
 use rand::RngCore;
 use rug::{Integer, ops::Pow};
 

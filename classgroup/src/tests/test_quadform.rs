@@ -1,4 +1,6 @@
-use classgroup::quadform::QuadForm;
+use rug::{Integer, ops::Pow};
+
+use crate::{cl_elgamal::cl_params, quadform::QuadForm, rug_seeded_rng};
 
 #[test]
 fn test_square() {
@@ -40,4 +42,21 @@ fn test_mul() {
     let c2 = b.mul(&a);
     assert_eq!(c1, c0);
     assert_eq!(c2, c0);
+}
+
+#[test]
+fn test_exp() {
+    let mut rng = rug_seeded_rng();
+    let g = cl_params::generator_Delta_K();
+    let x = Integer::from(2)
+        .pow(16)
+        .random_below(&mut rng)
+        .to_u64()
+        .unwrap();
+    let h1 = g.exp_naive(x);
+    let mut h2 = g.clone();
+    for _ in 1..x {
+        h2 = h2.mul(g);
+    }
+    assert_eq!(h1, h2);
 }

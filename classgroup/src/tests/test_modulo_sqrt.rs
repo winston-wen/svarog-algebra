@@ -1,4 +1,4 @@
-use classgroup::{generator_utils::sqrt_modp, rug_seeded_rng};
+use crate::{generator_utils::sqrt_modp, rug_seeded_rng};
 use rug::Integer;
 
 #[test]
