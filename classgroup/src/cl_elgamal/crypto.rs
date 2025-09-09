@@ -60,17 +60,35 @@ pub struct ClCiphertext {
     pub hrfm: QuadForm,
 }
 
+pub enum Nonce<'a> {
+    Automatic,
+    Return(&'a mut Integer),
+    Inject(&'a Integer),
+}
+
 impl ClCiphertext {
     pub fn encrypt(
         m: &Integer,
         h: &QuadForm, // other's public key
-    ) -> (ClCiphertext, Integer) {
-        let (r, gr) = keygen();
+        r: Nonce,
+    ) -> ClCiphertext {
+        let (r, gr) = match r {
+            Nonce::Automatic => keygen(),
+            Nonce::Return(ret) => {
+                let gr: QuadForm;
+                (*ret, gr) = keygen();
+                (ret.clone(), gr)
+            }
+            Nonce::Inject(r) => {
+                let gr = cl_params::generator_Delta_K().exp(r);
+                (r.clone(), gr)
+            }
+        };
         let hr = h.exp(&r);
         let hr = lift(&hr);
         let fm = exp_f(m);
         let hrfm = hr.mul(&fm);
-        (ClCiphertext { gr, hrfm }, r)
+        ClCiphertext { gr, hrfm }
     }
 
     pub fn decrypt(
