@@ -183,6 +183,7 @@ impl QuadForm {
 
     // [Cohen1993, Algorithm 5.4.7] (not NUCOMP)
     // NUCOMP is [Cohen1993, Algorithm 5.4.9]
+    #[allow(dead_code)]
     pub(crate) fn mul_naive(&self, other: &Self) -> Self {
         let (mut a1, mut b1, mut c1) = (self.a.clone(), self.b.clone(), self.get_c());
         let (mut a2, mut b2, mut c2) = (other.a.clone(), other.b.clone(), other.get_c());
@@ -357,6 +358,7 @@ impl QuadForm {
         Self::new(self.a.clone(), -self.b.clone(), &self.Delta).unwrap()
     }
 
+    #[allow(dead_code)]
     pub(crate) fn exp_naive(&self, k: impl Into<Integer>) -> Self {
         let mut base: Self = self.clone();
         let mut res = self.new_identity();
