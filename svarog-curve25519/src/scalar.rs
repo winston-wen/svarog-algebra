@@ -27,13 +27,12 @@ impl TrScalar<Curve25519> for Scalar {
         Self::new_from_bytes(&buf)
     }
 
-    // Little-endian, truncate or zero-padding at head, to 64 bytes.
+    // Little-endian, truncate or zero-padding at tail, to 64 bytes.
     #[inline]
     fn new_from_bytes(buf: &[u8]) -> Self {
         let mut buf64 = [0u8; 64];
-        let src_beg = if buf.len() >= 64 { buf.len() - 64 } else { 0 };
-        let dst_beg = if buf.len() >= 64 { 0 } else { 64 - buf.len() };
-        buf64[dst_beg..].copy_from_slice(&buf[src_beg..]);
+        let end = if buf.len() >= 64 { 64 } else { buf.len() };
+        buf64[..end].copy_from_slice(&buf[..end]);
         let es = EdwardScalar::from_bytes_mod_order_wide(&buf64);
         Scalar(es)
     }

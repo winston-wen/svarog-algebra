@@ -39,3 +39,12 @@ fn test_sign_verify() {
     let sig2: Signature = serde_cbor::from_reader(&file).unwrap();
     assert_eq!(sig, sig2);
 }
+
+#[test]
+fn test_fromto_bytes() {
+    let x = Scalar::new_rand();
+    let b = x.to_bytes();
+    assert_eq!(b.len(), 32);
+    let y = Scalar::new_from_bytes(&b);
+    assert_eq!(x, y);
+}
