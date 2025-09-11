@@ -18,7 +18,7 @@ fn test_encdec() {
     let m = Integer::random_bits(256, &mut rng).complete();
 
     let (x, h) = keygen();
-    let (ct, _) = ClCiphertext::encrypt(&m, &h);
+    let ct = ClCiphertext::encrypt(&m, &h, Nonce::Automatic);
     let m = m.modulo(cl_params::p());
     let m2 = ct.decrypt(&x);
     assert_eq!(m, m2);
@@ -34,8 +34,8 @@ fn test_lhe() {
     let (x, h) = keygen();
 
     '_test_add_ct: {
-        let (ct1, _) = ClCiphertext::encrypt(&m1, &h);
-        let (ct2, _) = ClCiphertext::encrypt(&m2, &h);
+        let ct1 = ClCiphertext::encrypt(&m1, &h, Nonce::Automatic);
+        let ct2 = ClCiphertext::encrypt(&m2, &h, Nonce::Automatic);
         let ct = ct1.add_ct(&ct2);
         let m_gt = Integer::from(&m1 + &m2).modulo(cl_params::p());
         let m_eval = ct.decrypt(&x);
@@ -43,7 +43,7 @@ fn test_lhe() {
     }
 
     '_test_add_pt: {
-        let (ct, _) = ClCiphertext::encrypt(&m1, &h);
+        let ct = ClCiphertext::encrypt(&m1, &h, Nonce::Automatic);
         let ct = ct.add_pt(&m2);
         let m_gt = Integer::from(&m1 + &m2).modulo(cl_params::p());
         let m_eval = ct.decrypt(&x);
@@ -51,7 +51,7 @@ fn test_lhe() {
     }
 
     '_test_mul_pt: {
-        let (ct, _) = ClCiphertext::encrypt(&m1, &h);
+        let ct = ClCiphertext::encrypt(&m1, &h, Nonce::Automatic);
         let ct = ct.mul_pt(&m2);
         let m_gt = Integer::from(&m1 * &m2).modulo(cl_params::p());
         let m_eval = ct.decrypt(&x);
@@ -68,7 +68,7 @@ fn test_mta() {
     let wj = Integer::from(Integer::random_bits(256, &mut rng));
 
     let (sk, pk) = keygen();
-    let (ki_ct, _) = ClCiphertext::encrypt(&ki, &pk);
+    let ki_ct = ClCiphertext::encrypt(&ki, &pk, Nonce::Automatic);
     // [uji] + vji == [kj] * wi
     let neg_vji = Integer::from(-&vji);
     let uji_ct = ki_ct.mul_pt(&wj).add_pt(&neg_vji);
