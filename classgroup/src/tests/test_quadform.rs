@@ -60,3 +60,11 @@ fn test_exp() {
     }
     assert_eq!(h1, h2);
 }
+
+#[test]
+fn test() {
+    let g = QuadForm::new(114, 514, -875169164).unwrap();
+    let mut gt = g.new_identity();
+    gt = gt.mul(&g);
+    println!("{:?}", &gt);
+}

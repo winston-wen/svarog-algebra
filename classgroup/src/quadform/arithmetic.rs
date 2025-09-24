@@ -50,12 +50,14 @@ impl QuadForm {
     #[inline]
     pub fn new_identity(&self) -> Self {
         // Here we trust that `self.Delta` and `self.L` are correct.
-        return Self {
-            a: (1).into(),
-            b: (1).into(),
-            Delta: self.Delta.clone(),
-            L: self.L.clone(),
-        };
+
+        if self.Delta.get_bit(0) {
+            // $$\Delta = 1 \pmod 4$$
+            return self.new_alike(1, 1).unwrap();
+        } else {
+            // $$\Delta = 0 \pmod 4$$
+            return self.new_alike(1, 0).unwrap();
+        }
     }
 
     pub fn new_alike(&self, a: impl Into<Integer>, b: impl Into<Integer>) -> anyhow::Result<Self> {
@@ -91,7 +93,13 @@ impl QuadForm {
     // Check if $$\gcd(a, b, c) = 1$$.
     #[inline]
     pub fn is_identity(&self) -> bool {
-        return self.a == 1 && self.b == 1;
+        if self.Delta.get_bit(0) {
+            // $$\Delta = 1 \pmod 4$$
+            return self.a == 1 && self.b == 1;
+        } else {
+            // $$\Delta = 0 \pmod 4$$
+            return self.a == 1 && self.b == 0;
+        }
     }
 
     // Check if $$\gcd(a, b, c) = 1$$.
@@ -181,10 +189,16 @@ impl QuadForm {
         }
     }
 
+    #[inline]
+    pub fn mul(&self, other: &Self) -> Self {
+        return self.mul_nucomp(other);
+    }
+
     // [Cohen1993, Algorithm 5.4.7] (not NUCOMP)
     // NUCOMP is [Cohen1993, Algorithm 5.4.9]
-    #[allow(dead_code)]
-    pub(crate) fn mul_naive(&self, other: &Self) -> Self {
+    //
+    // This implementation fails at (1, 1) * (114, 514, c=1919810)
+    pub fn mul_naive(&self, other: &Self) -> Self {
         let (mut a1, mut b1, mut c1) = (self.a.clone(), self.b.clone(), self.get_c());
         let (mut a2, mut b2, mut c2) = (other.a.clone(), other.b.clone(), other.get_c());
 
@@ -236,10 +250,10 @@ impl QuadForm {
         f3.reduce()
     }
 
-    /// [Cohen1993, Algorithm 5.4.8] NUDUPL
+    /// [Cohen1993, Algorithm 5.4.8] NUCOMP
     /// Reimplement `def _compose(...)` of
     /// https://github.com/GiacomoPope/ClassGroups/blob/main/classgroup.py
-    pub fn mul(&self, other: &Self) -> Self {
+    pub fn mul_nucomp(&self, other: &Self) -> Self {
         assert_eq!(
             self.Delta, other.Delta,
             "QuadForm::mul(...) refuses to multiply quadforms with different discriminant."
