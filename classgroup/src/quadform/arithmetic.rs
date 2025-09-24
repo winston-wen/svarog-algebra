@@ -120,7 +120,8 @@ impl QuadForm {
         let _ = self.is_primitive(Some(&mut gcd));
         let a = self.a.clone() / &gcd;
         let b = self.b.clone() / &gcd;
-        Self::new(a, b, &self.Delta).unwrap()
+        let d = self.Delta.clone() / &gcd / &gcd;
+        Self::new(a, b, d).unwrap()
     }
 
     #[inline]
@@ -189,16 +190,12 @@ impl QuadForm {
         }
     }
 
-    #[inline]
-    pub fn mul(&self, other: &Self) -> Self {
-        return self.mul_nucomp(other);
-    }
-
     // [Cohen1993, Algorithm 5.4.7] (not NUCOMP)
     // NUCOMP is [Cohen1993, Algorithm 5.4.9]
     //
     // This implementation fails at (1, 1) * (114, 514, c=1919810)
-    pub fn mul_naive(&self, other: &Self) -> Self {
+    #[allow(dead_code)]
+    pub(crate) fn mul_naive(&self, other: &Self) -> Self {
         let (mut a1, mut b1, mut c1) = (self.a.clone(), self.b.clone(), self.get_c());
         let (mut a2, mut b2, mut c2) = (other.a.clone(), other.b.clone(), other.get_c());
 
@@ -253,11 +250,17 @@ impl QuadForm {
     /// [Cohen1993, Algorithm 5.4.8] NUCOMP
     /// Reimplement `def _compose(...)` of
     /// https://github.com/GiacomoPope/ClassGroups/blob/main/classgroup.py
-    pub fn mul_nucomp(&self, other: &Self) -> Self {
+    pub fn mul(&self, other: &Self) -> Self {
         assert_eq!(
             self.Delta, other.Delta,
             "QuadForm::mul(...) refuses to multiply quadforms with different discriminant."
         );
+        let primitive_quadforms = self.is_primitive(None) && other.is_primitive(None);
+        debug_assert!(
+            primitive_quadforms,
+            "QuadForm::mul(...) refuses to multiply non-primitive quadforms."
+        );
+
         let (mut a1, mut b1, mut c1) = (self.a.clone(), self.b.clone(), self.get_c());
         let (mut a2, mut b2, mut c2) = (other.a.clone(), other.b.clone(), other.get_c());
 
@@ -332,6 +335,11 @@ impl QuadForm {
     /// Reimplement `def _square(...)` of
     /// https://github.com/GiacomoPope/ClassGroups/blob/main/classgroup.py
     pub fn square(&self) -> Self {
+        let primitive_quadform = self.is_primitive(None);
+        debug_assert!(
+            primitive_quadform,
+            "QuadForm::square(...) refuses to operate on a non-primitive form."
+        );
         let a = self.a.clone();
         let b = self.b.clone();
         let c = self.get_c();
