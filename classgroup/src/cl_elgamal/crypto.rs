@@ -34,7 +34,7 @@ pub fn exp_f(m: impl Into<Integer>) -> QuadForm {
     let psquare = cl_params::f().a.clone();
     let m = m.clone().modulo(cl_params::p());
     if m.is_zero() {
-        return QuadForm::new(1, 1, cl_params::Delta_p()).unwrap();
+        return cl_params::f().new_identity();
     }
     let mut inv_m = m.clone().invert(cl_params::p()).unwrap();
     if inv_m.is_even() {
