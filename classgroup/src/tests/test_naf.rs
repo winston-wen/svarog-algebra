@@ -40,7 +40,7 @@ fn test_exp() {
     let x = Integer::from(2).pow(1024).random_below(&mut rng);
     let h1 = g.exp(&x);
     let h2 = g.exp_naive(&x);
-    assert_eq!(h1, h2);
+    assert_eq!(h1, h2)
 }
 
 #[test]

@@ -48,6 +48,8 @@ fn main() {
         "log2(Delta_K) = {}",
         cl_playground::Delta_K.significant_bits()
     );
+    println!("g.a = {}", cl_playground::G.a.to_string_radix(16));
+    println!("g.b = {}", cl_playground::G.b.to_string_radix(16));
     println!();
 
     println!("===== Check if ⟨g⟩ is safe =====");
